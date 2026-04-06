@@ -1005,12 +1005,16 @@
       };
 
       const emailAddress = "9-AVS-FS-AFS-700-Correspondence@faa.gov";
-      const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(`FAA Monthly Report: ${company.name} - ${reportMonth}`)}&body=${encodeURIComponent(`To whom it may concern,\n\nPlease find attached the monthly flight operations report for ${company.name} (Exemption #${company.exemption}) for the period of ${reportMonth}.\n\nOfficial Company Email: ${company.email || 'N/A'}\n\nThank you,\n${company.supervisor}`)}`;
+      const emailSubject = `FAA Monthly Report: ${company.name} - ${reportMonth}`;
+      const emailBody = `To whom it may concern,\n\nPlease find attached the monthly flight operations report for ${company.name} (Exemption #${company.exemption}) for the period of ${reportMonth}.\n\nOfficial Company Email: ${company.email || 'N/A'}\n\nThank you,\n${company.supervisor}`;
+
+      const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+      const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${emailAddress}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
 
       const handleEmailClick = (e) => {
         try {
            copyToClipboard(emailAddress);
-           notify("Opening mail client... (Address copied to clipboard just in case!)", "success");
+           notify("Address copied to clipboard just in case!", "success");
         } catch (err) {}
       };
 
@@ -1026,7 +1030,8 @@
                 
                 <div className="flex flex-col sm:flex-row justify-end gap-4 print:hidden mb-8 border-b border-slate-200 pb-8">
                    <Button onClick={handlePrint} className="bg-slate-800 text-white hover:bg-slate-700 py-4"><Printer size={16}/> Save as PDF / Print</Button>
-                   <a href={mailtoLink} onClick={handleEmailClick} className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"><Navigation size={16}/> Email to FAA</a>
+                   <a href={gmailLink} target="_blank" rel="noopener noreferrer" onClick={handleEmailClick} className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-red-600 text-white hover:bg-red-700 active:scale-[0.98]"><Navigation size={16}/> Send via Web Gmail</a>
+                   <a href={mailtoLink} onClick={handleEmailClick} className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"><Navigation size={16}/> Send via Mail App</a>
                 </div>
 
                 <div className="text-center md:text-left border-b-2 border-black pb-6">
