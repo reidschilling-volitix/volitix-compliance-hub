@@ -1008,8 +1008,7 @@
       const emailSubject = `FAA Monthly Report: ${company.name} - ${reportMonth}`;
       const emailBody = `To whom it may concern,\n\nPlease find attached the monthly flight operations report for ${company.name} (Exemption #${company.exemption}) for the period of ${reportMonth}.\n\nOfficial Company Email: ${company.email || 'N/A'}\n\nThank you,\n${company.supervisor}`;
 
-      // We define two separate links: one for desktop mail apps, one for Google Mail web
-      const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+      // We define the link for Google Mail web
       const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${emailAddress}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
 
       const handleEmailClick = (e) => {
@@ -1029,10 +1028,10 @@
            {showFormalReport ? (
              <div className="bg-white text-black p-8 md:p-12 rounded-[2rem] shadow-2xl space-y-8 font-sans overflow-x-auto print:p-0 print:shadow-none print:border-none print:w-full print:m-0">
                 
-                <div className="flex flex-col sm:flex-row justify-end gap-4 print:hidden mb-8 border-b border-slate-200 pb-8">
+                <div className="flex flex-col sm:flex-row justify-end items-center gap-4 print:hidden mb-8 border-b border-slate-200 pb-8">
+                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mr-auto hidden sm:block">Step 1: Save as PDF. Step 2: Send & Attach.</span>
                    <Button onClick={handlePrint} className="bg-slate-800 text-white hover:bg-slate-700 py-4"><Printer size={16}/> Save as PDF / Print</Button>
-                   <a href={gmailLink} target="_blank" rel="noopener noreferrer" onClick={handleEmailClick} className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-red-600 text-white hover:bg-red-700 active:scale-[0.98]"><Navigation size={16}/> Send via Web Gmail</a>
-                   <a href={mailtoLink} onClick={handleEmailClick} className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"><Navigation size={16}/> Send via Mail App</a>
+                   <a href={gmailLink} target="_blank" rel="noopener noreferrer" onClick={handleEmailClick} className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-red-600 text-white hover:bg-red-700 active:scale-[0.98]"><Navigation size={16}/> Send via Gmail</a>
                 </div>
 
                 <div className="text-center md:text-left border-b-2 border-black pb-6">
