@@ -62,7 +62,7 @@
       Droplets, ClipboardCheck, FileCode, Paperclip, X, FlaskConical, 
       AlertTriangle, LayoutTemplate, Trash2, Clock, MapPin, 
       Settings2, Wrench, Edit3, Award, CalendarDays, FileText, 
-      FileBarChart, Printer, Eye, Activity, Compass, LogOut, ArrowRight, Lock, 
+      FileBarChart, Printer, Eye, EyeOff, Activity, Compass, LogOut, ArrowRight, Lock, 
       Users, ChevronLeft, ChevronRight, Target, GripVertical, Map as MapIcon, Send
     } from 'lucide-react';
 
@@ -185,10 +185,13 @@
       return <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${variants[variant]} ${className}`}>{children}</button>;
     };
 
-    const Input = ({ label, className="", ...props }) => (
+    const Input = ({ label, className="", rightElement, type="text", ...props }) => (
       <div className="space-y-2 min-w-0">
         {label && <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block">{label}</label>}
-        <input className={`w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors min-w-0 ${className}`} {...props} />
+        <div className="relative">
+          <input type={type} className={`w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors min-w-0 ${className} ${rightElement ? 'pr-12' : ''}`} {...props} />
+          {rightElement && <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">{rightElement}</div>}
+        </div>
       </div>
     );
 
@@ -634,7 +637,7 @@
           <FormCard title={state.id ? 'Edit Product' : 'New Chemical Product'} icon={FlaskConical} onSubmit={onSubmit} onCancel={onCancel}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
               <Input label="Chemical Name" value={state.name} onChange={e => setState({...state, name: e.target.value})} required/>
-              <div className="relative min-w-0"><Input label="Default Rate" value={state.defaultRate} onChange={e => setState({...state, defaultRate: e.target.value})} required/><span className="absolute right-4 top-11 text-[9px] text-slate-500 font-black">oz/ac</span></div>
+              <Input label="Default Rate" value={state.defaultRate} onChange={e => setState({...state, defaultRate: e.target.value})} required rightElement={<span className="text-[9px] text-slate-500 font-black">oz/ac</span>} />
               <div className="md:col-span-2"><TextArea label="Product Description" value={state.description || ''} onChange={e => setState({...state, description: e.target.value})} /></div>
             </div>
           </FormCard>
@@ -764,14 +767,8 @@
                 <h3 className="text-blue-400 font-black uppercase text-[10px] tracking-widest border-b border-slate-800 pb-2">Application Parameters</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                    <Input label="Field Name" value={state.locationName} onChange={e => setState({...state, locationName: e.target.value})}/>
-                   <div className="relative min-w-0">
-                     <Input label="Total Acreage" type="number" value={state.totalAcreage} onChange={e => setState({...state, totalAcreage: e.target.value})}/>
-                     <span className="absolute right-4 top-11 text-[9px] text-slate-500 font-black">AC</span>
-                   </div>
-                   <div className="relative min-w-0">
-                     <Input label="Treated Acreage" type="number" value={state.treatedAcreage} onChange={e => setState({...state, treatedAcreage: e.target.value})}/>
-                     <span className="absolute right-4 top-11 text-[9px] text-slate-500 font-black">AC</span>
-                   </div>
+                   <Input label="Total Acreage" type="number" value={state.totalAcreage} onChange={e => setState({...state, totalAcreage: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">AC</span>} />
+                   <Input label="Treated Acreage" type="number" value={state.treatedAcreage} onChange={e => setState({...state, treatedAcreage: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">AC</span>} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div className="flex flex-col gap-2 min-w-0">
@@ -798,15 +795,8 @@
                       <option value="Solid Cone">Solid Cone</option>
                       <option value="Other">Other...</option>
                    </Select>
-                   <div className="relative min-w-0">
-                     <Input label="Target Dist" type="number" value={state.targetDistance} onChange={e => setState({...state, targetDistance: e.target.value})}/>
-                     <span className="absolute right-4 top-11 text-[9px] text-slate-500 font-black">FT</span>
-                   </div>
-                   
-                   <div className="relative min-w-0">
-                     <Input label="Pump Pressure" type="number" value={state.pumpPressure} onChange={e => setState({...state, pumpPressure: e.target.value})}/>
-                     <span className="absolute right-4 top-11 text-[9px] text-slate-500 font-black">PSI</span>
-                   </div>
+                   <Input label="Target Dist" type="number" value={state.targetDistance} onChange={e => setState({...state, targetDistance: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">FT</span>} />
+                   <Input label="Pump Pressure" type="number" value={state.pumpPressure} onChange={e => setState({...state, pumpPressure: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">PSI</span>} />
                    
                    <div className="space-y-2 min-w-0">
                      <label className="text-[10px] text-slate-400 font-black uppercase pl-1 block truncate">Speed</label>
@@ -851,10 +841,7 @@
                      </div>
                    </div>
                    
-                   <div className="relative min-w-0">
-                     <Input label="Humidity" type="number" value={state.humidity} onChange={e => setState({...state, humidity: e.target.value})}/>
-                     <span className="absolute right-4 top-11 text-[9px] text-slate-500 font-black">%</span>
-                   </div>
+                   <Input label="Humidity" type="number" value={state.humidity} onChange={e => setState({...state, humidity: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">%</span>} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div className="space-y-2 min-w-0"><label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 block truncate">Boundary (KML)</label><div className="flex flex-col sm:flex-row gap-2 min-w-0"><button type="button" onClick={() => kmlRef.current?.click()} className={`flex-1 p-4 rounded-2xl text-xs font-black uppercase border truncate transition-colors min-w-0 ${state.kmlFileName ? 'bg-[#9cd33b]/10 border-[#9cd33b]/50 text-[#9cd33b]' : 'bg-slate-950 border-slate-800 text-slate-400'}`}>{state.kmlFileName || 'Attach KML'}</button>{state.kmlFileName && <Button variant="danger" className="shrink-0" onClick={() => { setState({...state, kmlData: null, kmlFileName: ''}); if(kmlRef.current) kmlRef.current.value=""; }}><X size={16}/></Button>}<input type="file" accept=".kml" ref={kmlRef} className="hidden" onChange={handleKml}/></div></div>
@@ -898,14 +885,8 @@
                     <Input type="date" label="Filing Date" value={state.date} onChange={e => setState({...state, date: e.target.value})} />
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                       <div className="space-y-2 min-w-0"><Input type="time" label="Local Start" value={state.localStartTime} onChange={e => setState({...state, localStartTime: e.target.value})} /><div className="text-[9px] font-black text-[#9cd33b] uppercase pl-1 truncate">Zulu: {derived.utcStart}Z</div></div>
-                      <div className="relative min-w-0">
-                        <Input label="Radius" type="number" value={state.radius} onChange={e => setState({...state, radius: e.target.value})} />
-                        <span className="absolute right-4 top-11 text-[9px] text-slate-500 font-black">NM</span>
-                      </div>
-                      <div className="relative min-w-0">
-                        <Input label="Duration" type="number" value={state.duration} onChange={e => setState({...state, duration: e.target.value})} />
-                        <span className="absolute right-4 top-11 text-[9px] text-slate-500 font-black">HRS</span>
-                      </div>
+                      <Input label="Radius" type="number" value={state.radius} onChange={e => setState({...state, radius: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">NM</span>} />
+                      <Input label="Duration" type="number" value={state.duration} onChange={e => setState({...state, duration: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">HRS</span>} />
                     </div>
                     
                     <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 space-y-4 min-w-0">
@@ -960,25 +941,7 @@
 
     const FaaReportTab = ({ company, fleet, monthlyReport, reportMonth, setReportMonth, showFormalReport, setShowFormalReport, user, notify }) => {
       const handlePrint = () => {
-        const element = document.getElementById('faa-report-content');
-        if (!element) return;
-        
-        notify("Generating PDF, please wait...", "info");
-        
-        const opt = {
-          margin:       0.5,
-          filename:     `FAA_Monthly_Report_${company.name}_${reportMonth}.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true },
-          jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-        
-        window.html2pdf().set(opt).from(element).save().then(() => {
-           notify("PDF Downloaded successfully!", "success");
-        }).catch(err => {
-           console.error(err);
-           notify("Error generating PDF. Try again.", "error");
-        });
+        window.print();
       };
 
       const getDaysInMonth = (yyyyMonth) => {
@@ -988,24 +951,14 @@
         return `${m}/01/${y} - ${m}/${lastDay}/${y}`;
       };
 
-      const emailAddress = "reidschilling@gmail.com";
+      const emailAddress = "9-AVS-FS-AFS-700-Correspondence@faa.gov";
       const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(`FAA Monthly Report: ${company.name} - ${reportMonth}`)}&body=${encodeURIComponent(`To whom it may concern,\n\nPlease find attached the monthly flight operations report for ${company.name} (Exemption #${company.exemption}) for the period of ${reportMonth}.\n\nOfficial Company Email: ${company.email || 'N/A'}\n\nThank you,\n${company.supervisor}`)}`;
 
-      const handleDirectSend = () => {
-        notify("Compiling report and dispatching email...", "info");
-        
-        // Simulating network delay for backend email server response
-        setTimeout(() => {
-           notify("Success! Report safely dispatched to reidschilling@gmail.com.", "success");
-           
-           // Logs the dispatch action to Firebase (to trigger email extensions if configured)
-           addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'email_outbox'), {
-              to: 'reidschilling@gmail.com',
-              subject: `FAA Monthly Report: ${company.name} - ${reportMonth}`,
-              sentAt: new Date().toISOString()
-           }).catch(() => {});
-           
-        }, 1500);
+      const handleEmailClick = (e) => {
+        try {
+           navigator.clipboard.writeText(emailAddress);
+           notify("Opening mail client... (Address copied to clipboard just in case!)", "success");
+        } catch (err) {}
       };
 
       return (
@@ -1016,15 +969,11 @@
            </Card>
 
            {showFormalReport ? (
-             <div id="faa-report-content" className="bg-white text-black p-8 md:p-12 rounded-[2rem] shadow-2xl space-y-8 font-sans overflow-x-auto print:p-0 print:shadow-none print:border-none print:w-full print:m-0">
-                <div data-html2canvas-ignore="true" className="flex flex-col sm:flex-row justify-end gap-4 print:hidden mb-8 border-b border-slate-200 pb-8">
-                   <Button onClick={handlePrint} className="bg-slate-800 text-white hover:bg-slate-700 py-4"><Printer size={16}/> Save as PDF</Button>
-                   <button 
-                     onClick={handleDirectSend} 
-                     className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"
-                   >
-                     <Send size={16}/> Send to FAA
-                   </button>
+             <div className="bg-white text-black p-8 md:p-12 rounded-[2rem] shadow-2xl space-y-8 font-sans overflow-x-auto print:p-0 print:shadow-none print:border-none print:w-full print:m-0">
+                
+                <div className="flex flex-col sm:flex-row justify-end gap-4 print:hidden mb-8 border-b border-slate-200 pb-8">
+                   <Button onClick={handlePrint} className="bg-slate-800 text-white hover:bg-slate-700 py-4"><Printer size={16}/> Save as PDF / Print</Button>
+                   <a href={mailtoLink} target="_blank" rel="noopener noreferrer" onClick={handleEmailClick} className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"><Navigation size={16}/> Email to FAA</a>
                 </div>
 
                 <div className="text-center md:text-left border-b-2 border-black pb-6">
@@ -1115,8 +1064,8 @@
                                      <td className="p-3 border border-black">{l.chemical || 'N/A'}</td>
                                      <td className="p-3 border border-black">{l.locationName || 'N/A'}</td>
                                      <td className="p-3 border border-black font-mono text-xs">{l.coordinates || 'N/A'}</td>
-                                     <td className="p-3 border border-black">{l.incidents && l.incidents !== 'None' ? l.damageDescription || 'YES' : 'No Damage Reported'}</td>
-                                     <td className="p-3 border border-black">{l.incidents && l.incidents !== 'None' ? l.damageDescription || 'Equipment Malfunction' : 'No Damage Reported'}</td>
+                                     <td className="p-3 border border-black">{l.incidents && l.incidents !== 'None' ? l.incidents : 'No Damage Reported'}</td>
+                                     <td className="p-3 border border-black">{l.incidents && l.incidents !== 'None' ? 'Equipment Malfunction' : 'No Damage Reported'}</td>
                                   </tr>
                                ))
                             )}
@@ -1128,7 +1077,7 @@
            ) : (
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:hidden min-w-0">
                 <Card className="space-y-6 min-w-0"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-800 pb-4 truncate">Monthly Totals</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0"><div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 truncate">Total Hours</p><p className="text-3xl font-black text-[#9cd33b] truncate">{monthlyReport.totalHours}</p></div><div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 truncate">Total Flights</p><p className="text-3xl font-black text-slate-200 truncate">{monthlyReport.flightCount}</p></div></div></Card>
-                <Card className="flex flex-col items-center justify-center text-center space-y-6 min-w-0"><ShieldCheck size={56} className="text-[#9cd33b] opacity-50 shrink-0" /><Button className="w-full py-5 text-sm" onClick={async () => { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'faa_reports'), { month: reportMonth, companyName: company.name, filedAt: new Date().toISOString() }); notify("Report Saved to Vault.", "success"); }}>Archive Report to Vault</Button></Card>
+                <Card className="flex flex-col items-center justify-center text-center space-y-6 min-w-0"><ShieldCheck size={56} className="text-[#9cd33b] opacity-50 shrink-0" /><Button className="w-full py-5 text-sm" onClick={async () => { await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'faa_reports'), { month: reportMonth, filedAt: new Date().toISOString() }); notify("Report Saved to Vault.", "success"); }}>Archive Report to Vault</Button></Card>
              </div>
            )}
         </div>
@@ -1144,6 +1093,7 @@
       const [customUser, setCustomUser] = useState(null); 
       const [authMode, setAuthMode] = useState('login'); 
       const [authForm, setAuthForm] = useState({ companyName: '', username: '', password: '', role: 'Pilot' });
+      const [showPassword, setShowPassword] = useState(false);
 
       const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
       const notify = (message, type = 'info') => {
@@ -1185,7 +1135,10 @@
           try { 
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } 
             else { await signInAnonymously(auth); } 
-          } catch (err) { console.error(err); }
+          } catch (err) { 
+            console.error(err); 
+            if (err.code === 'auth/operation-not-allowed') notify("Firebase Setup: You must enable 'Anonymous' sign-in in Firebase Auth settings.", "error");
+          }
         };
         initAuth();
         return onAuthStateChanged(auth, (u) => { setUser(u); if (!u) setLoading(false); });
@@ -1250,52 +1203,80 @@
 
       const handleLogin = async (e) => {
          e.preventDefault();
-         if (!user) {
+         let currentUser = user;
+         
+         if (!currentUser) {
             if (firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "mock") {
                return notify("Deployment Error: Missing Firebase Keys in the code!", "error");
             }
-            return notify("Secure connection failed. (Check config)", "error");
+            try {
+               const cred = await signInAnonymously(auth);
+               currentUser = cred.user;
+               setUser(cred.user);
+            } catch(err) {
+               if (err.code === 'auth/operation-not-allowed') return notify("Firebase Error: Enable 'Anonymous' Sign-In in Firebase Auth!", "error");
+               return notify(`Connection Blocked: ${err.message}`, "error");
+            }
          }
+         
          const cName = authForm.companyName?.trim().toLowerCase();
          const uName = authForm.username?.trim().toLowerCase();
          
-         const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
-         
-         const found = snap.docs.map(d => d.data()).find(u => {
-            return u.companyName?.toLowerCase() === cName && u.username?.toLowerCase() === uName && u.password === authForm.password;
-         });
-         
-         if (found) { 
-           setCustomUser(found); 
-           setActiveTab(found.role === 'Dispatcher' ? 'schedule' : 'dashboard'); 
-           notify("Welcome back", 'success'); 
-         } else {
-           notify("Invalid credentials.", "error");
+         try {
+            const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
+            
+            const found = snap.docs.map(d => d.data()).find(u => {
+               return u.companyName?.toLowerCase() === cName && u.username?.toLowerCase() === uName && u.password === authForm.password;
+            });
+            
+            if (found) { 
+              setCustomUser(found); 
+              setActiveTab(found.role === 'Dispatcher' ? 'schedule' : 'dashboard'); 
+              notify("Welcome back", 'success'); 
+            } else {
+              notify("Invalid credentials.", "error");
+            }
+         } catch(err) {
+            notify(`Database Error: ${err.message}`, "error");
          }
       };
 
       const handleRegister = async (e) => {
          e.preventDefault();
-         if (!user) {
+         let currentUser = user;
+         
+         if (!currentUser) {
             if (firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "mock") {
                return notify("Deployment Error: Missing Firebase Keys in the code!", "error");
             }
-            return notify("Secure connection failed. (Check config)", "error");
+            try {
+               const cred = await signInAnonymously(auth);
+               currentUser = cred.user;
+               setUser(cred.user);
+            } catch(err) {
+               if (err.code === 'auth/operation-not-allowed') return notify("Firebase Error: Enable 'Anonymous' Sign-In in Firebase Auth!", "error");
+               return notify(`Connection Blocked: ${err.message}`, "error");
+            }
          }
-         const cName = authForm.companyName?.trim();
-         const uName = authForm.username?.trim();
-         const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
-         if (snap.docs.map(d=>d.data()).find(u => u.companyName?.toLowerCase() === cName.toLowerCase() && u.username?.toLowerCase() === uName.toLowerCase())) return notify("Username exists.", "error");
          
-         const newUser = { companyName: cName, username: uName, password: authForm.password, role: authForm.role };
-         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'), newUser);
-         if (authForm.role === 'Manager') {
-            const cId = cName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-            const cDoc = doc(db, 'artifacts', appId, 'public', 'data', 'saas_companies', cId);
-            const cDocSnap = await getDoc(cDoc);
-            if (!cDocSnap.exists()) await setDoc(cDoc, { name: cName, supervisor: uName, email: '', phone: '', address: '', certNo: '', exemption: '12345', timezone: -6, fleet: [] });
+         try {
+            const cName = authForm.companyName?.trim();
+            const uName = authForm.username?.trim();
+            const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
+            if (snap.docs.map(d=>d.data()).find(u => u.companyName?.toLowerCase() === cName.toLowerCase() && u.username?.toLowerCase() === uName.toLowerCase())) return notify("Username exists.", "error");
+            
+            const newUser = { companyName: cName, username: uName, password: authForm.password, role: authForm.role };
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'), newUser);
+            if (authForm.role === 'Manager') {
+               const cId = cName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+               const cDoc = doc(db, 'artifacts', appId, 'public', 'data', 'saas_companies', cId);
+               const cDocSnap = await getDoc(cDoc);
+               if (!cDocSnap.exists()) await setDoc(cDoc, { name: cName, supervisor: uName, email: '', phone: '', address: '', certNo: '', exemption: '12345', timezone: -6, fleet: [] });
+            }
+            setCustomUser(newUser); setActiveTab(newUser.role === 'Dispatcher' ? 'schedule' : 'dashboard'); notify("User created.", "success");
+         } catch (err) {
+            notify(`Database Error: ${err.message}`, "error");
          }
-         setCustomUser(newUser); setActiveTab(newUser.role === 'Dispatcher' ? 'schedule' : 'dashboard'); notify("User created.", "success");
       };
 
       if (loading) return <div className="flex h-screen items-center justify-center bg-slate-950 text-[#9cd33b] font-black uppercase tracking-widest"><GlobalStyles/>Initializing...</div>;
@@ -1313,7 +1294,14 @@
                <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
                   <Input label="Company Code" value={authForm.companyName} onChange={e => setAuthForm({...authForm, companyName: e.target.value})} required/>
                   <Input label="Username" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} required/>
-                  <Input label="Password" type="password" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} required/>
+                  <Input 
+                    label="Password" 
+                    type={showPassword ? "text" : "password"} 
+                    value={authForm.password} 
+                    onChange={e => setAuthForm({...authForm, password: e.target.value})} 
+                    required 
+                    rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                  />
                   {authMode === 'register' && <Select label="Role" value={authForm.role} onChange={e => setAuthForm({...authForm, role: e.target.value})}><option value="Pilot">Pilot</option><option value="Manager">Manager</option><option value="Dispatcher">Dispatcher</option></Select>}
                   <Button type="submit" className="w-full py-4 mt-6">{authMode === 'login' ? 'Login' : 'Create Key'} <ArrowRight size={16}/></Button>
                </form>
