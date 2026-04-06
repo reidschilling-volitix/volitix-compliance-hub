@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Volitix AG Compliance Hub</title>
+  <title>SprayOps</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@800;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 
   <!-- Leaflet CSS & JS for Live KML Mapping -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -38,6 +38,9 @@
       margin: 0; 
       padding: 0; 
       background-color: #020617 !important; 
+      background-image: 
+        radial-gradient(circle at 15% 50%, rgba(156, 211, 59, 0.04), transparent 25%), 
+        radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.04), transparent 25%);
       color: #e2e8f0 !important; 
       font-family: system-ui, -apple-system, sans-serif;
     }
@@ -180,78 +183,93 @@
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         @media print { body { background: white !important; color: black !important; } .print\\:hidden { display: none !important; } .print\\:p-0 { padding: 0 !important; } .print\\:shadow-none { box-shadow: none !important; } .print\\:border-none { border: none !important; } }
-        .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     );
 
     const Toast = ({ notification }) => {
       if (!notification.show) return null;
       return (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl font-black uppercase tracking-widest text-[11px] flex items-center gap-3 animate-fade-in ${notification.type === 'error' ? 'bg-red-600 text-white' : notification.type === 'success' ? 'bg-[#9cd33b] text-[#020617]' : 'bg-blue-600 text-white'}`}>
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[250] px-6 py-3.5 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] font-black uppercase tracking-widest text-[11px] flex items-center gap-3 animate-fade-in border ${notification.type === 'error' ? 'bg-red-950/90 border-red-500/50 text-red-400 backdrop-blur-md' : notification.type === 'success' ? 'bg-[#9cd33b]/10 border-[#9cd33b]/50 text-[#9cd33b] backdrop-blur-md' : 'bg-blue-950/90 border-blue-500/50 text-blue-400 backdrop-blur-md'}`}>
           {notification.type === 'error' ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
           {String(notification.message)}
         </div>
       );
     };
 
-    const Card = ({ children, className = "" }) => <div className={`bg-slate-900 border border-slate-800 p-8 rounded-[2rem] shadow-xl ${className}`}>{children}</div>;
+    const Card = ({ children, className = "" }) => (
+      <div className={`bg-gradient-to-br from-slate-900 to-slate-900/90 border border-slate-700/30 p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.25)] backdrop-blur-md relative overflow-hidden ${className}`}>
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-600/30 to-transparent"></div>
+        {children}
+      </div>
+    );
 
     const Button = ({ children, onClick, type="button", variant="primary", className="", disabled=false }) => {
-      const base = "px-4 py-3 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]";
-      const variants = { primary: "bg-[#9cd33b] text-[#020617] hover:bg-[#bce455]", secondary: "bg-slate-800 text-slate-200 hover:bg-slate-700", danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20" };
-      return <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${variants[variant]} ${className}`}>{children}</button>;
+      const base = "px-5 py-3.5 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.96] relative overflow-hidden group";
+      const variants = { 
+        primary: "bg-gradient-to-r from-[#9cd33b] to-[#7ab02b] text-[#020617] shadow-[0_0_15px_rgba(156,211,59,0.2)] hover:shadow-[0_0_25px_rgba(156,211,59,0.4)] border border-[#bce455]/50", 
+        secondary: "bg-slate-800/80 backdrop-blur-md text-slate-200 hover:bg-slate-700 hover:shadow-lg border border-slate-700/50 hover:border-slate-600", 
+        danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]" 
+      };
+      return (
+        <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${variants[variant]} ${className}`}>
+           <div className="absolute inset-0 bg-white/20 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-500 ease-in-out"></div>
+           <span className="relative z-10 flex items-center justify-center gap-2">{children}</span>
+        </button>
+      );
     };
 
     const Input = ({ label, className="", rightElement, type="text", ...props }) => (
-      <div className="space-y-2 min-w-0">
-        {label && <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block">{label}</label>}
+      <div className="space-y-2 min-w-0 group">
+        {label && <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block group-focus-within:text-[#9cd33b] transition-colors">{label}</label>}
         <div className="relative">
-          <input type={type} className={`w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors min-w-0 ${className} ${rightElement ? 'pr-12' : ''}`} {...props} />
-          {rightElement && <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">{rightElement}</div>}
+          <input type={type} className={`w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b]/60 focus:ring-4 focus:ring-[#9cd33b]/10 focus:bg-slate-900 transition-all duration-300 min-w-0 shadow-inner ${className} ${rightElement ? 'pr-12' : ''}`} {...props} />
+          {rightElement && <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">{rightElement}</div>}
         </div>
       </div>
     );
 
     const Select = ({ label, children, className="", ...props }) => (
-      <div className="space-y-2 min-w-0">
-        {label && <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block">{label}</label>}
-        <select className={`w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b] transition-colors min-w-0 ${className}`} {...props}>{children}</select>
+      <div className="space-y-2 min-w-0 group">
+        {label && <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block group-focus-within:text-[#9cd33b] transition-colors">{label}</label>}
+        <select className={`w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b]/60 focus:ring-4 focus:ring-[#9cd33b]/10 focus:bg-slate-900 transition-all duration-300 min-w-0 shadow-inner ${className}`} {...props}>{children}</select>
       </div>
     );
 
     const TextArea = ({ label, className="", ...props }) => (
-      <div className="space-y-2 min-w-0">
-        {label && <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block">{label}</label>}
-        <textarea className={`w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors h-32 resize-none min-w-0 ${className}`} {...props} />
+      <div className="space-y-2 min-w-0 group">
+        {label && <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block group-focus-within:text-[#9cd33b] transition-colors">{label}</label>}
+        <textarea className={`w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b]/60 focus:ring-4 focus:ring-[#9cd33b]/10 focus:bg-slate-900 transition-all duration-300 h-32 resize-none min-w-0 shadow-inner ${className}`} {...props} />
       </div>
     );
 
     const FormCard = ({ title, icon: Icon, onSubmit, onCancel, submitLabel, children }) => (
       <div className="space-y-6 animate-fade-in">
-        {onCancel && <div className="flex"><button type="button" onClick={onCancel} className="flex items-center gap-2 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-widest bg-slate-900 border border-slate-800 px-5 py-3 rounded-xl"><X size={14} /> Cancel Edit</button></div>}
-        <Card>
-          <div className="flex items-center gap-3 text-[#9cd33b] font-black uppercase text-xs tracking-widest border-b border-slate-800 pb-6 mb-8 flex-wrap">
-            {Icon && <Icon size={18} className="shrink-0" />} <span className="truncate">{title}</span>
+        {onCancel && <div className="flex"><button type="button" onClick={onCancel} className="flex items-center gap-2 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-widest bg-slate-900 border border-slate-800 px-5 py-3 rounded-xl transition-colors hover:bg-slate-800"><X size={14} /> Cancel Edit</button></div>}
+        <Card className="border-[#9cd33b]/20">
+          <div className="flex items-center gap-4 text-[#9cd33b] font-black uppercase text-xs tracking-widest border-b border-slate-800 pb-6 mb-8 flex-wrap">
+            {Icon && <div className="p-2.5 bg-[#9cd33b]/10 rounded-xl shadow-[0_0_15px_rgba(156,211,59,0.15)]"><Icon size={20} className="shrink-0" strokeWidth={2.5} /></div>} 
+            <span className="truncate">{title}</span>
           </div>
-          <form onSubmit={onSubmit} className="space-y-8">{children}<div className="pt-6 border-t border-slate-800"><Button type="submit" className="w-full py-5 text-sm">{submitLabel || 'Save Record'}</Button></div></form>
+          <form onSubmit={onSubmit} className="space-y-8">{children}<div className="pt-8 border-t border-slate-800"><Button type="submit" className="w-full py-5 text-sm">{submitLabel || 'Save Record'}</Button></div></form>
         </Card>
       </div>
     );
 
     const TableCard = ({ title, icon: Icon, actionLabel, onAction, secondaryActionLabel, onSecondaryAction, children }) => (
       <div className="space-y-8 animate-fade-in">
-        <Card className="flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-4 min-w-0 flex-1">
-            <div className="p-4 bg-[#9cd33b]/10 border border-[#9cd33b]/20 rounded-3xl text-[#9cd33b] shrink-0">{Icon && <Icon size={32} />}</div>
-            <div className="min-w-0"><h2 className="text-xl font-black uppercase tracking-tighter text-slate-100 truncate">{title}</h2><p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">Manage database records</p></div>
+        <Card className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 !p-6 border-[#9cd33b]/20">
+          <div className="flex items-center gap-5 min-w-0 flex-1">
+            <div className="p-4 bg-gradient-to-br from-[#9cd33b]/20 to-[#9cd33b]/5 border border-[#9cd33b]/30 rounded-[1.5rem] text-[#9cd33b] shrink-0 shadow-[0_0_15px_rgba(156,211,59,0.15)]">{Icon && <Icon size={28} strokeWidth={2.5} />}</div>
+            <div className="min-w-0"><h2 className="text-xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-100 to-slate-400 truncate">{title}</h2><p className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest mt-1 truncate">Manage Database Records</p></div>
           </div>
           <div className="flex flex-wrap gap-3 w-full md:w-auto shrink-0">
             {onSecondaryAction && <Button variant="secondary" onClick={onSecondaryAction}>{secondaryActionLabel}</Button>}
             {onAction && <Button onClick={onAction} className="flex-1 md:flex-none"><Plus size={16}/> {actionLabel}</Button>}
           </div>
         </Card>
-        <div className="bg-slate-900 border border-slate-800 rounded-[3rem] overflow-hidden shadow-xl"><div className="overflow-x-auto">{children}</div></div>
+        <div className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-[3rem] overflow-hidden shadow-2xl"><div className="overflow-x-auto">{children}</div></div>
       </div>
     );
 
@@ -1218,7 +1236,7 @@
       return (
         <div className="space-y-8 animate-fade-in min-w-0">
            <Card className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 print:hidden min-w-0">
-              <div className="flex items-center gap-6 min-w-0 flex-1"><div className="p-4 bg-[#9cd33b]/10 border border-[#9cd33b]/20 rounded-3xl text-[#9cd33b] shrink-0"><FileBarChart size={32} /></div><div className="min-w-0"><h2 className="text-2xl font-black uppercase tracking-tighter text-slate-100 truncate">FAA Compliance Hub</h2><p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">Reporting for {company.name}</p></div></div>
+              <div className="flex items-center gap-6 min-w-0 flex-1"><div className="p-4 bg-[#9cd33b]/10 border border-[#9cd33b]/20 rounded-3xl text-[#9cd33b] shrink-0"><FileBarChart size={32} /></div><div className="min-w-0"><h2 className="text-2xl font-black uppercase tracking-tighter text-slate-100 truncate">SprayOps FAA Reporting</h2><p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">Reporting for {company.name}</p></div></div>
               <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto shrink-0"><input type="month" className="w-full sm:w-auto bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-black text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={reportMonth} onChange={e => setReportMonth(e.target.value)}/><Button onClick={() => setShowFormalReport(!showFormalReport)} className="w-full sm:w-auto">{showFormalReport ? 'Close Preview' : 'Generate Report'}</Button></div>
            </Card>
 
@@ -1402,7 +1420,7 @@
       const [allFaaReports, setAllFaaReports] = useState([]);
 
       // Form States
-      const [company, setCompany] = useState({ name: 'Compliance Hub', supervisor: 'Lead Pilot', email: '', phone: '', address: '', certNo: '', exemption: '12345', timezone: -6, fleet: [] });
+      const [company, setCompany] = useState({ name: 'SprayOps', supervisor: 'Lead Pilot', email: '', phone: '', address: '', certNo: '', exemption: '12345', timezone: -6, fleet: [] });
       const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
 
       const [notamState, setNotamState] = useState({ ...defaultNotamState, isEditing: false });
@@ -1649,12 +1667,18 @@
 
       if (!customUser) {
         return (
-          <div className="flex h-screen items-center justify-center p-6 bg-slate-950 relative">
+          <div className="flex h-screen items-center justify-center p-6 bg-[#020617] relative overflow-hidden">
+            {/* Ambient Background Glows */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-[#9cd33b]/10 blur-[120px] rounded-full pointer-events-none"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40rem] h-[40rem] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+            
             <GlobalStyles /><Toast notification={notification} />
-            <Card className="w-full max-w-md space-y-8 animate-fade-in border-[#9cd33b]/20">
+            <Card className="w-full max-w-md space-y-8 animate-fade-in border-[#9cd33b]/30 shadow-[0_0_50px_rgba(156,211,59,0.1)] relative z-10 backdrop-blur-2xl bg-slate-900/80">
                <div className="text-center flex flex-col items-center">
-                  <div className="w-20 h-20 bg-[#9cd33b]/10 rounded-full flex items-center justify-center mb-6 border border-[#9cd33b]/30 shadow-[0_0_30px_rgba(156,211,59,0.15)]"><Lock className="text-[#9cd33b]" size={32} /></div>
-                  <h1 className="text-3xl font-black uppercase tracking-widest text-slate-100">Ops Portal</h1>
+                  <div className="w-24 h-24 bg-gradient-to-br from-[#9cd33b]/20 to-transparent rounded-full flex items-center justify-center mb-6 border border-[#9cd33b]/40 shadow-[0_0_40px_rgba(156,211,59,0.2)]"><Lock className="text-[#9cd33b]" size={36} strokeWidth={2.5} /></div>
+                  <h1 className="text-5xl font-['Orbitron'] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-white to-[#9cd33b] drop-shadow-[0_0_15px_rgba(156,211,59,0.4)] mb-1">Spray Ops</h1>
+                  <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.4em] mt-2 mb-2">Flight Command Center</p>
+                  <div className="h-px w-12 bg-gradient-to-r from-transparent via-[#9cd33b]/50 to-transparent my-4"></div>
                   <p className="text-[#9cd33b] text-[10px] font-black uppercase tracking-widest mt-2">
                      {authMode === 'login' ? 'Secure Login' : 
                       authMode === 'register' ? 'Register Access' : 
@@ -1673,9 +1697,9 @@
                       value={authForm.password} 
                       onChange={e => setAuthForm({...authForm, password: e.target.value})} 
                       required 
-                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
                     />
-                    <Button type="submit" className="w-full py-4 mt-6">Login <ArrowRight size={16}/></Button>
+                    <Button type="submit" className="w-full py-4 mt-8">Login <ArrowRight size={16}/></Button>
                  </form>
                )}
 
@@ -1690,47 +1714,49 @@
                       value={authForm.password} 
                       onChange={e => setAuthForm({...authForm, password: e.target.value})} 
                       required 
-                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
                     />
                     <Select label="Role" value={authForm.role} onChange={e => setAuthForm({...authForm, role: e.target.value})}><option value="Pilot">Pilot</option><option value="Manager">Manager</option><option value="Dispatcher">Dispatcher</option></Select>
-                    <Button type="submit" className="w-full py-4 mt-6">Create Key <ArrowRight size={16}/></Button>
+                    <Button type="submit" className="w-full py-4 mt-8">Create Key <ArrowRight size={16}/></Button>
                  </form>
                )}
 
                {authMode === 'forgot' && (
                  <form onSubmit={handleForgotPassword} className="space-y-4">
-                    <p className="text-xs text-slate-400 text-center mb-4">Enter your exact registration details to verify your account and reset your password.</p>
+                    <p className="text-xs text-slate-400 text-center mb-6 leading-relaxed">Enter your exact registration details to verify your account and reset your password.</p>
                     <Input label="Company Code" value={authForm.companyName} onChange={e => setAuthForm({...authForm, companyName: e.target.value})} required/>
                     <Input label="Username" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} required/>
                     <Input label="Email Address" type="email" value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} required/>
-                    <Button type="submit" className="w-full py-4 mt-6">Verify Account <ArrowRight size={16}/></Button>
+                    <Button type="submit" className="w-full py-4 mt-8">Verify Account <ArrowRight size={16}/></Button>
                  </form>
                )}
 
                {authMode === 'reset' && (
                  <form onSubmit={handleResetPassword} className="space-y-4">
-                    <p className="text-xs text-[#9cd33b] font-bold text-center mb-4">Account verified for {resetUserDoc?.username}.</p>
+                    <div className="bg-[#9cd33b]/10 border border-[#9cd33b]/30 p-4 rounded-2xl mb-6">
+                       <p className="text-xs text-[#9cd33b] font-bold text-center">Account verified for <span className="font-black">{resetUserDoc?.username}</span>.</p>
+                    </div>
                     <Input 
                       label="New Password" 
                       type={showPassword ? "text" : "password"} 
                       value={authForm.password} 
                       onChange={e => setAuthForm({...authForm, password: e.target.value})} 
                       required 
-                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
                     />
-                    <Button type="submit" className="w-full py-4 mt-6">Update Password <ArrowRight size={16}/></Button>
+                    <Button type="submit" className="w-full py-4 mt-8">Update Password <ArrowRight size={16}/></Button>
                  </form>
                )}
 
                {authMode === 'login' && (
-                 <div className="flex flex-col gap-3 text-center pt-6 border-t border-slate-800 mt-6">
-                    <button type="button" onClick={() => setAuthMode('forgot')} className="text-[10px] text-blue-500 hover:text-blue-400 uppercase font-black tracking-widest transition-colors">Forgot Password?</button>
-                    <button type="button" onClick={() => setAuthMode('register')} className="text-[10px] text-slate-500 hover:text-slate-300 uppercase font-black tracking-widest transition-colors">Need an account? Register Here</button>
+                 <div className="flex flex-col gap-4 text-center pt-8 border-t border-slate-800 mt-8">
+                    <button type="button" onClick={() => setAuthMode('forgot')} className="text-[10px] text-blue-400 hover:text-blue-300 uppercase font-black tracking-widest transition-colors">Forgot Password?</button>
+                    <button type="button" onClick={() => setAuthMode('register')} className="text-[10px] text-slate-400 hover:text-slate-200 uppercase font-black tracking-widest transition-colors">Need an account? Register Here</button>
                  </div>
                )}
                {(authMode === 'register' || authMode === 'forgot' || authMode === 'reset') && (
-                 <div className="text-center pt-6 border-t border-slate-800 mt-6">
-                    <button type="button" onClick={() => { setAuthMode('login'); setResetUserDoc(null); }} className="text-[10px] text-slate-500 hover:text-slate-300 uppercase font-black tracking-widest transition-colors">{authMode === 'reset' ? 'Cancel' : 'Already have access? Login Here'}</button>
+                 <div className="text-center pt-8 border-t border-slate-800 mt-8">
+                    <button type="button" onClick={() => { setAuthMode('login'); setResetUserDoc(null); }} className="text-[10px] text-slate-400 hover:text-slate-200 uppercase font-black tracking-widest transition-colors">{authMode === 'reset' ? 'Cancel' : 'Already have access? Login Here'}</button>
                  </div>
                )}
             </Card>
@@ -1753,7 +1779,8 @@
       ];
 
       return (
-        <div className="flex h-screen bg-slate-950 overflow-hidden font-sans selection:bg-[#9cd33b] selection:text-[#020617]">
+        <div className="flex h-screen bg-[#020617] overflow-hidden font-sans selection:bg-[#9cd33b] selection:text-[#020617] relative">
+          <div className="absolute top-0 left-0 w-full h-[30rem] bg-gradient-to-b from-[#9cd33b]/[0.02] to-transparent pointer-events-none"></div>
           <GlobalStyles /><Toast notification={notification} />
           
           {deleteConfirm && (
@@ -1772,85 +1799,48 @@
             </div>
           )}
 
-          {showProfileModal && (
-            <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
-              <Card className="max-w-sm w-full border-[#9cd33b]/30">
-                <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-                  <div className="flex items-center gap-3 text-[#9cd33b]">
-                     <User size={20} />
-                     <h3 className="text-lg font-black uppercase tracking-widest">My Profile</h3>
-                  </div>
-                  <button onClick={() => setShowProfileModal(false)} className="text-slate-500 hover:text-slate-300"><X size={16}/></button>
-                </div>
-                <div className="space-y-4">
-                  <div><p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Username</p><p className="font-bold text-slate-200">{customUser.username}</p></div>
-                  <div><p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Email</p><p className="font-bold text-slate-200">{customUser.email || 'No email on file'}</p></div>
-                  
-                  <div className="pt-6 border-t border-slate-800 mt-2">
-                     <p className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest mb-4">Change Password</p>
-                     <div className="space-y-3">
-                         <Input 
-                           type={showPassword ? "text" : "password"} 
-                           placeholder="Current password..." 
-                           value={oldPassword} 
-                           onChange={e => setOldPassword(e.target.value)} 
-                           rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>}
-                         />
-                         <Input 
-                           type={showPassword ? "text" : "password"} 
-                           placeholder="New password..." 
-                           value={newPassword} 
-                           onChange={e => setNewPassword(e.target.value)} 
-                         />
-                     </div>
-                     <Button onClick={handleChangePassword} className="w-full mt-4 py-4" disabled={!newPassword || !oldPassword}>Update Password</Button>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          )}
-
-          <div className="w-20 lg:w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 print:hidden z-30 shadow-2xl">
-            <div className="p-4 lg:p-6 border-b border-slate-800 min-w-0 flex flex-col items-center text-center">
+          <div className="w-20 lg:w-64 bg-slate-900/80 backdrop-blur-2xl border-r border-slate-800 flex flex-col shrink-0 print:hidden z-30 shadow-[4px_0_24px_rgba(0,0,0,0.2)] relative">
+            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[#9cd33b]/5 to-transparent pointer-events-none"></div>
+            <div className="p-4 lg:p-6 border-b border-slate-800/50 min-w-0 flex flex-col items-center text-center relative z-10">
               <div className="hidden lg:flex flex-col items-center w-full">
-                <h1 className={`font-black text-[#9cd33b] uppercase tracking-tighter break-words leading-tight w-full ${
+                <h1 className={`font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase tracking-tighter break-words leading-tight w-full drop-shadow-md ${
                   (company.name?.length || 0) > 25 ? 'text-xs' : 
                   (company.name?.length || 0) > 15 ? 'text-sm' : 
                   'text-lg'
                 }`}>
                   {company.name || 'Organization'}
                 </h1>
-                <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-1">Compliance Hub</span>
+                <span className="text-[10px] font-['Orbitron'] text-[#9cd33b] font-black uppercase tracking-[0.3em] mt-1.5 drop-shadow-[0_0_10px_rgba(156,211,59,0.3)]">Spray Ops</span>
                 {isOnline ? (
-                   <span className="text-[8px] bg-[#9cd33b]/20 text-[#9cd33b] px-2 py-0.5 rounded-full font-black uppercase tracking-widest mt-2 flex items-center gap-1"><Activity size={10}/> Online (Syncing)</span>
+                   <span className="text-[8px] bg-[#9cd33b]/10 border border-[#9cd33b]/30 text-[#9cd33b] px-2.5 py-1 rounded-full font-black uppercase tracking-widest mt-3 flex items-center gap-1.5 shadow-[0_0_10px_rgba(156,211,59,0.1)]"><Activity size={10}/> Online</span>
                 ) : (
-                   <span className="text-[8px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full font-black uppercase tracking-widest mt-2 flex items-center gap-1"><AlertTriangle size={10}/> Offline (Caching)</span>
+                   <span className="text-[8px] bg-amber-500/10 border border-amber-500/30 text-amber-500 px-2.5 py-1 rounded-full font-black uppercase tracking-widest mt-3 flex items-center gap-1.5"><AlertTriangle size={10}/> Caching</span>
                 )}
               </div>
-              <ShieldCheck className="lg:hidden mx-auto text-[#9cd33b] shrink-0" size={24}/>
+              <ShieldCheck className="lg:hidden mx-auto text-[#9cd33b] shrink-0" size={24} strokeWidth={2.5}/>
             </div>
-            <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+            <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto relative z-10">
               {tabs.map(t => {
                 const Icon = t.icon;
                 return (
-                  <button key={t.id} onClick={() => {setActiveTab(t.id); setShowFormalReport(false);}} className={`w-full flex items-center justify-center lg:justify-start p-3 rounded-2xl transition-all min-w-0 ${activeTab === t.id ? 'bg-[#9cd33b] text-[#020617] shadow-lg' : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'}`}>
-                     <Icon size={18} className="shrink-0"/>
-                     <span className="hidden lg:inline text-[11px] font-black uppercase tracking-widest ml-4 truncate">{t.label}</span>
+                  <button key={t.id} onClick={() => {setActiveTab(t.id); setShowFormalReport(false);}} className={`w-full flex items-center justify-center lg:justify-start p-3.5 rounded-2xl transition-all duration-300 min-w-0 group ${activeTab === t.id ? 'bg-gradient-to-r from-[#9cd33b] to-[#8ac22a] text-[#020617] shadow-[0_0_20px_rgba(156,211,59,0.3)] font-black' : 'hover:bg-slate-800/50 text-slate-400 hover:text-slate-200'}`}>
+                     <Icon size={18} className={`shrink-0 transition-transform duration-300 ${activeTab === t.id ? 'scale-110' : 'group-hover:scale-110'}`}/>
+                     <span className={`hidden lg:inline text-[11px] uppercase tracking-widest ml-4 truncate ${activeTab === t.id ? 'font-black' : 'font-bold'}`}>{t.label}</span>
                   </button>
                 );
               })}
             </nav>
-            <div className="p-4 border-t border-slate-800 space-y-2 min-w-0">
-               <div className="hidden lg:flex flex-col min-w-0 mb-2">
-                 <span className="text-[10px] text-slate-400 font-bold uppercase truncate">{customUser.username}</span>
-                 <span className="text-[9px] text-[#9cd33b] font-black uppercase tracking-widest truncate">{customUser.role}</span>
+            <div className="p-4 border-t border-slate-800/50 space-y-2 min-w-0 relative z-10">
+               <div className="hidden lg:flex flex-col min-w-0 mb-3 px-2">
+                 <span className="text-[10px] text-slate-300 font-black uppercase tracking-widest truncate">{customUser.username}</span>
+                 <span className="text-[9px] text-[#9cd33b] font-bold uppercase tracking-widest truncate mt-0.5 opacity-80">{customUser.role}</span>
                </div>
-               <button onClick={() => setShowProfileModal(true)} className="w-full p-3 flex items-center justify-center lg:justify-start rounded-xl text-slate-400 hover:bg-slate-800 transition-all min-w-0">
-                  <User size={16} className="shrink-0"/>
-                  <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest ml-3 truncate">My Profile</span>
+               <button onClick={() => setShowProfileModal(true)} className="w-full p-3 flex items-center justify-center lg:justify-start rounded-xl text-slate-400 hover:bg-slate-800/50 transition-all min-w-0 group">
+                  <User size={16} className="shrink-0 group-hover:text-white transition-colors"/>
+                  <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest ml-3 truncate group-hover:text-white transition-colors">My Profile</span>
                </button>
-               <button onClick={() => {setCustomUser(null); setAuthForm({...authForm, password: ''});}} className="w-full p-3 flex items-center justify-center lg:justify-start rounded-xl text-red-500 hover:bg-red-500/10 transition-all min-w-0">
-                  <LogOut size={16} className="shrink-0"/>
+               <button onClick={() => {setCustomUser(null); setAuthForm({...authForm, password: ''});}} className="w-full p-3 flex items-center justify-center lg:justify-start rounded-xl text-red-500/80 hover:text-red-400 hover:bg-red-500/10 transition-all min-w-0 group">
+                  <LogOut size={16} className="shrink-0 group-hover:scale-110 transition-transform"/>
                   <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest ml-3 truncate">Sign Out</span>
                </button>
             </div>
