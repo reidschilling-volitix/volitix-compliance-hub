@@ -1008,6 +1008,7 @@
       const emailSubject = `FAA Monthly Report: ${company.name} - ${reportMonth}`;
       const emailBody = `To whom it may concern,\n\nPlease find attached the monthly flight operations report for ${company.name} (Exemption #${company.exemption}) for the period of ${reportMonth}.\n\nOfficial Company Email: ${company.email || 'N/A'}\n\nThank you,\n${company.supervisor}`;
 
+      // We define two separate links: one for desktop mail apps, one for Google Mail web
       const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
       const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${emailAddress}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
 
