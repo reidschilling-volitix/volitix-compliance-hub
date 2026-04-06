@@ -75,16 +75,15 @@
     // ============================================================================
 
     // 🔥 REPLACE WITH YOUR FIREBASE KEYS FOR GITHUB DEPLOYMENT 🔥
-   // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyBiW4z1vIMlznLsHs-Xhz44chOYkiYVBKI",
-  authDomain: "spray-drone-compliance-hub.firebaseapp.com",
-  projectId: "spray-drone-compliance-hub",
-  storageBucket: "spray-drone-compliance-hub.firebasestorage.app",
-  messagingSenderId: "565689528030",
-  appId: "1:565689528030:web:3e405f9d0ff30b02061c4f",
-  measurementId: "G-J3QZKLGNX1"
-};
+    const fallbackConfig = {
+      apiKey: "AIzaSyBiW4z1vIMlznLsHs-Xhz44chOYkiYVBKI",
+      authDomain: "spray-drone-compliance-hub.firebaseapp.com",
+      projectId: "spray-drone-compliance-hub",
+      storageBucket: "spray-drone-compliance-hub.firebasestorage.app",
+      messagingSenderId: "565689528030",
+      appId: "1:565689528030:web:3e405f9d0ff30b02061c4f",
+      measurementId: "G-J3QZKLGNX1"
+    };
 
     const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : fallbackConfig;
     const app = initializeApp(firebaseConfig);
