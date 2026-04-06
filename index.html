@@ -326,22 +326,75 @@
       );
     };
 
-    const SettingsTab = ({ company, setCompany, handleCompanySettingsSave }) => (
-      <FormCard title="Command Settings" icon={Settings2} onSubmit={handleCompanySettingsSave} submitLabel="Update Settings">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Input label="Organization Name" value={company.name} onChange={e => setCompany({...company, name: e.target.value})} required/>
-          <Input label="FAA Exemption Number" value={company.exemption} onChange={e => setCompany({...company, exemption: e.target.value})} />
-          <Input label="Chief Supervisor / Pilot" value={company.supervisor} onChange={e => setCompany({...company, supervisor: e.target.value})} required/>
-          <Input label="Part 137 / 107 Cert Number" value={company.certNo} onChange={e => setCompany({...company, certNo: e.target.value})} />
-          <Input label="Business Phone" value={company.phone || ''} onChange={e => setCompany({...company, phone: e.target.value})} />
-          <Input label="Business Email" type="email" value={company.email || ''} onChange={e => setCompany({...company, email: e.target.value})} />
-          <Select label="Local Time Zone" value={company.timezone} onChange={e => setCompany({...company, timezone: parseInt(e.target.value)})}>
-             {TIME_ZONES.map(tz => <option className="bg-slate-900" key={tz.offset} value={tz.offset}>{tz.label}</option>)}
-          </Select>
-          <div className="md:col-span-2"><Input label="Business Address" value={company.address || ''} onChange={e => setCompany({...company, address: e.target.value})} /></div>
+    const SettingsTab = ({ company, setCompany, handleCompanySettingsSave, customUser, setCustomUser, notify, db, appId }) => {
+      const [oldPassword, setOldPassword] = useState('');
+      const [newPassword, setNewPassword] = useState('');
+      const [showPassword, setShowPassword] = useState(false);
+
+      const handleChangePassword = async (e) => {
+         e.preventDefault();
+         if (!oldPassword || !newPassword) return;
+         if (oldPassword !== customUser.password) {
+            return notify("Current password is incorrect.", "error");
+         }
+         try {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_users', customUser.id), { password: newPassword });
+            notify("Password changed successfully!", "success");
+            setCustomUser({...customUser, password: newPassword});
+            setOldPassword('');
+            setNewPassword('');
+         } catch(err) {
+            notify("Error changing password", "error");
+         }
+      };
+
+      return (
+        <div className="space-y-8 animate-fade-in min-w-0">
+          <FormCard title="Command Settings" icon={Settings2} onSubmit={handleCompanySettingsSave} submitLabel="Update Settings">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Input label="Organization Name" value={company.name} onChange={e => setCompany({...company, name: e.target.value})} required/>
+              <Input label="FAA Exemption Number" value={company.exemption} onChange={e => setCompany({...company, exemption: e.target.value})} />
+              <Input label="Chief Supervisor / Pilot" value={company.supervisor} onChange={e => setCompany({...company, supervisor: e.target.value})} required/>
+              <Input label="Part 137 / 107 Cert Number" value={company.certNo} onChange={e => setCompany({...company, certNo: e.target.value})} />
+              <Input label="Business Phone" value={company.phone || ''} onChange={e => setCompany({...company, phone: e.target.value})} />
+              <Input label="Business Email" type="email" value={company.email || ''} onChange={e => setCompany({...company, email: e.target.value})} />
+              <Select label="Local Time Zone" value={company.timezone} onChange={e => setCompany({...company, timezone: parseInt(e.target.value)})}>
+                 {TIME_ZONES.map(tz => <option className="bg-slate-900" key={tz.offset} value={tz.offset}>{tz.label}</option>)}
+              </Select>
+              <div className="md:col-span-2"><Input label="Business Address" value={company.address || ''} onChange={e => setCompany({...company, address: e.target.value})} /></div>
+            </div>
+          </FormCard>
+
+          <FormCard title="Account Security" icon={Lock} onSubmit={handleChangePassword} submitLabel="Update Password">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               <div className="space-y-2 min-w-0">
+                 <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block">Username</label>
+                 <input className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-500 cursor-not-allowed opacity-50" value={customUser?.username || ''} disabled />
+               </div>
+               <div className="space-y-4 md:col-span-2 lg:col-span-1">
+                 <Input 
+                   label="Current Password" 
+                   type={showPassword ? "text" : "password"} 
+                   placeholder="Verify current password..." 
+                   value={oldPassword} 
+                   onChange={e => setOldPassword(e.target.value)} 
+                   required 
+                   rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>}
+                 />
+                 <Input 
+                   label="New Password" 
+                   type={showPassword ? "text" : "password"} 
+                   placeholder="Enter new password..." 
+                   value={newPassword} 
+                   onChange={e => setNewPassword(e.target.value)} 
+                   required 
+                 />
+               </div>
+            </div>
+          </FormCard>
         </div>
-      </FormCard>
-    );
+      );
+    };
 
     const ScheduleTab = ({ workOrders, isEditing, state, setState, onCancel, onSubmit, customers, customUser, handleDrop, getStatusColor, deleteItem, notify }) => {
       const [viewMode, setViewMode] = useState('calendar');
@@ -912,7 +965,7 @@
                     </div>
                   </div>
                   <div className="bg-slate-950 p-8 rounded-[2rem] border border-slate-800 flex flex-col shadow-inner min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 min-w-0"><span className="text-[10px] text-slate-500 font-black uppercase tracking-widest truncate">Verified Output</span><div className="flex gap-4 shrink-0"><button onClick={() => { setState({...state, script: generate()}); notify("Script Staged", "info"); }} className="text-blue-500 hover:text-blue-400 text-[10px] font-black uppercase">Stage</button><button onClick={() => { copyToClipboard(generate()); notify("Copied!", "success");}} className="text-[#9cd33b] hover:text-[#bce455] text-[10px] font-black uppercase">Copy</button></div></div>
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 min-w-0"><span className="text-[10px] text-slate-500 font-black uppercase tracking-widest truncate">Verified Output</span><div className="flex gap-4 shrink-0"><button onClick={() => { setState({...state, script: generate()}); notify("Script Staged", "info"); }} className="text-blue-500 hover:text-blue-400 text-[10px] font-black uppercase">Stage</button><button onClick={() => {navigator.clipboard.writeText(generate()); notify("Copied!", "success");}} className="text-[#9cd33b] hover:text-[#bce455] text-[10px] font-black uppercase">Copy</button></div></div>
                     <div className="flex-1 font-mono text-xs leading-loose text-[#9cd33b] bg-slate-900/50 p-6 rounded-2xl border border-slate-800 break-all whitespace-normal overflow-y-auto">{generate()}</div>
                   </div>
                </div>
@@ -956,7 +1009,7 @@
 
       const handleEmailClick = (e) => {
         try {
-           navigator.clipboard.writeText(emailAddress);
+           copyToClipboard(emailAddress);
            notify("Opening mail client... (Address copied to clipboard just in case!)", "success");
         } catch (err) {}
       };
@@ -973,7 +1026,7 @@
                 
                 <div className="flex flex-col sm:flex-row justify-end gap-4 print:hidden mb-8 border-b border-slate-200 pb-8">
                    <Button onClick={handlePrint} className="bg-slate-800 text-white hover:bg-slate-700 py-4"><Printer size={16}/> Save as PDF / Print</Button>
-                   <a href={mailtoLink} target="_blank" rel="noopener noreferrer" onClick={handleEmailClick} className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"><Navigation size={16}/> Email to FAA</a>
+                   <a href={mailtoLink} onClick={handleEmailClick} className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"><Navigation size={16}/> Email to FAA</a>
                 </div>
 
                 <div className="text-center md:text-left border-b-2 border-black pb-6">
@@ -1092,7 +1145,7 @@
       const [user, setUser] = useState(null); 
       const [customUser, setCustomUser] = useState(null); 
       const [authMode, setAuthMode] = useState('login'); 
-      const [authForm, setAuthForm] = useState({ companyName: '', username: '', password: '', role: 'Pilot' });
+      const [authForm, setAuthForm] = useState({ companyName: '', username: '', email: '', password: '', role: 'Pilot' });
       const [showPassword, setShowPassword] = useState(false);
 
       const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
@@ -1126,7 +1179,12 @@
       const [productState, setProductState] = useState({ ...defaultProductState, isEditing: false });
       const [logState, setLogState] = useState({ ...defaultLogState, isEditing: false });
       const [workOrderState, setWorkOrderState] = useState({ ...defaultWorkOrderState, isEditing: false });
+      
       const [deleteConfirm, setDeleteConfirm] = useState(null);
+      const [resetUserDoc, setResetUserDoc] = useState(null);
+      const [showProfileModal, setShowProfileModal] = useState(false);
+      const [oldPassword, setOldPassword] = useState('');
+      const [newPassword, setNewPassword] = useState('');
 
       const kmlInputRef = useRef(null);
 
@@ -1225,7 +1283,7 @@
          try {
             const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
             
-            const found = snap.docs.map(d => d.data()).find(u => {
+            const found = snap.docs.map(d => ({id: d.id, ...d.data()})).find(u => {
                return u.companyName?.toLowerCase() === cName && u.username?.toLowerCase() === uName && u.password === authForm.password;
             });
             
@@ -1265,17 +1323,79 @@
             const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
             if (snap.docs.map(d=>d.data()).find(u => u.companyName?.toLowerCase() === cName.toLowerCase() && u.username?.toLowerCase() === uName.toLowerCase())) return notify("Username exists.", "error");
             
-            const newUser = { companyName: cName, username: uName, password: authForm.password, role: authForm.role };
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'), newUser);
+            const newUser = { companyName: cName, username: uName, email: authForm.email?.trim() || '', password: authForm.password, role: authForm.role };
+            const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'), newUser);
+            
             if (authForm.role === 'Manager') {
                const cId = cName.toLowerCase().replace(/[^a-z0-9]/g, '-');
                const cDoc = doc(db, 'artifacts', appId, 'public', 'data', 'saas_companies', cId);
                const cDocSnap = await getDoc(cDoc);
                if (!cDocSnap.exists()) await setDoc(cDoc, { name: cName, supervisor: uName, email: '', phone: '', address: '', certNo: '', exemption: '12345', timezone: -6, fleet: [] });
             }
-            setCustomUser(newUser); setActiveTab(newUser.role === 'Dispatcher' ? 'schedule' : 'dashboard'); notify("User created.", "success");
+            setCustomUser({ id: docRef.id, ...newUser }); 
+            setActiveTab(newUser.role === 'Dispatcher' ? 'schedule' : 'dashboard'); 
+            notify("User created.", "success");
          } catch (err) {
             notify(`Database Error: ${err.message}`, "error");
+         }
+      };
+
+      const handleForgotPassword = async (e) => {
+         e.preventDefault();
+         const cName = authForm.companyName?.trim().toLowerCase();
+         const uName = authForm.username?.trim().toLowerCase();
+         const email = authForm.email?.trim().toLowerCase();
+
+         try {
+            const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
+            const userDoc = snap.docs.find(d => {
+                const data = d.data();
+                return data.companyName?.toLowerCase() === cName && 
+                       data.username?.toLowerCase() === uName && 
+                       data.email && data.email.toLowerCase() === email;
+            });
+
+            if (userDoc) {
+                setResetUserDoc({ id: userDoc.id, ...userDoc.data() });
+                setAuthMode('reset');
+                notify("Account verified. Please set a new password.", "success");
+            } else {
+                notify("No matching account found with those exact details.", "error");
+            }
+         } catch (err) {
+            notify(`Error: ${err.message}`, "error");
+         }
+      };
+
+      const handleResetPassword = async (e) => {
+         e.preventDefault();
+         if (!resetUserDoc || !authForm.password) return;
+         try {
+             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_users', resetUserDoc.id), {
+                 password: authForm.password
+             });
+             notify("Password updated successfully! You can now log in.", "success");
+             setAuthMode('login');
+             setAuthForm({...authForm, password: ''});
+             setResetUserDoc(null);
+         } catch (err) {
+             notify(`Error updating password: ${err.message}`, "error");
+         }
+      };
+
+      const handleChangePassword = async () => {
+         if (oldPassword !== customUser.password) {
+             return notify("Current password is incorrect.", "error");
+         }
+         try {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_users', customUser.id), { password: newPassword });
+            notify("Password changed successfully!", "success");
+            setCustomUser({...customUser, password: newPassword});
+            setOldPassword('');
+            setNewPassword('');
+            setShowProfileModal(false);
+         } catch(err) {
+            notify("Error changing password", "error");
          }
       };
 
@@ -1289,23 +1409,84 @@
                <div className="text-center flex flex-col items-center">
                   <div className="w-20 h-20 bg-[#9cd33b]/10 rounded-full flex items-center justify-center mb-6 border border-[#9cd33b]/30 shadow-[0_0_30px_rgba(156,211,59,0.15)]"><Lock className="text-[#9cd33b]" size={32} /></div>
                   <h1 className="text-3xl font-black uppercase tracking-widest text-slate-100">Ops Portal</h1>
-                  <p className="text-[#9cd33b] text-[10px] font-black uppercase tracking-widest mt-2">{authMode === 'login' ? 'Secure Login' : 'Register Access'}</p>
+                  <p className="text-[#9cd33b] text-[10px] font-black uppercase tracking-widest mt-2">
+                     {authMode === 'login' ? 'Secure Login' : 
+                      authMode === 'register' ? 'Register Access' : 
+                      authMode === 'forgot' ? 'Account Recovery' : 
+                      'Reset Password'}
+                  </p>
                </div>
-               <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
-                  <Input label="Company Code" value={authForm.companyName} onChange={e => setAuthForm({...authForm, companyName: e.target.value})} required/>
-                  <Input label="Username" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} required/>
-                  <Input 
-                    label="Password" 
-                    type={showPassword ? "text" : "password"} 
-                    value={authForm.password} 
-                    onChange={e => setAuthForm({...authForm, password: e.target.value})} 
-                    required 
-                    rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
-                  />
-                  {authMode === 'register' && <Select label="Role" value={authForm.role} onChange={e => setAuthForm({...authForm, role: e.target.value})}><option value="Pilot">Pilot</option><option value="Manager">Manager</option><option value="Dispatcher">Dispatcher</option></Select>}
-                  <Button type="submit" className="w-full py-4 mt-6">{authMode === 'login' ? 'Login' : 'Create Key'} <ArrowRight size={16}/></Button>
-               </form>
-               <div className="text-center pt-6 border-t border-slate-800"><button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-[10px] text-slate-500 hover:text-slate-300 uppercase font-black tracking-widest transition-colors">{authMode === 'login' ? 'Need an account? Register Here' : 'Already have access? Login Here'}</button></div>
+               
+               {authMode === 'login' && (
+                 <form onSubmit={handleLogin} className="space-y-4">
+                    <Input label="Company Code" value={authForm.companyName} onChange={e => setAuthForm({...authForm, companyName: e.target.value})} required/>
+                    <Input label="Username" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} required/>
+                    <Input 
+                      label="Password" 
+                      type={showPassword ? "text" : "password"} 
+                      value={authForm.password} 
+                      onChange={e => setAuthForm({...authForm, password: e.target.value})} 
+                      required 
+                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                    />
+                    <Button type="submit" className="w-full py-4 mt-6">Login <ArrowRight size={16}/></Button>
+                 </form>
+               )}
+
+               {authMode === 'register' && (
+                 <form onSubmit={handleRegister} className="space-y-4">
+                    <Input label="Company Code" value={authForm.companyName} onChange={e => setAuthForm({...authForm, companyName: e.target.value})} required/>
+                    <Input label="Username" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} required/>
+                    <Input label="Email Address" type="email" value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} required/>
+                    <Input 
+                      label="Password" 
+                      type={showPassword ? "text" : "password"} 
+                      value={authForm.password} 
+                      onChange={e => setAuthForm({...authForm, password: e.target.value})} 
+                      required 
+                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                    />
+                    <Select label="Role" value={authForm.role} onChange={e => setAuthForm({...authForm, role: e.target.value})}><option value="Pilot">Pilot</option><option value="Manager">Manager</option><option value="Dispatcher">Dispatcher</option></Select>
+                    <Button type="submit" className="w-full py-4 mt-6">Create Key <ArrowRight size={16}/></Button>
+                 </form>
+               )}
+
+               {authMode === 'forgot' && (
+                 <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <p className="text-xs text-slate-400 text-center mb-4">Enter your exact registration details to verify your account and reset your password.</p>
+                    <Input label="Company Code" value={authForm.companyName} onChange={e => setAuthForm({...authForm, companyName: e.target.value})} required/>
+                    <Input label="Username" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} required/>
+                    <Input label="Email Address" type="email" value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} required/>
+                    <Button type="submit" className="w-full py-4 mt-6">Verify Account <ArrowRight size={16}/></Button>
+                 </form>
+               )}
+
+               {authMode === 'reset' && (
+                 <form onSubmit={handleResetPassword} className="space-y-4">
+                    <p className="text-xs text-[#9cd33b] font-bold text-center mb-4">Account verified for {resetUserDoc?.username}.</p>
+                    <Input 
+                      label="New Password" 
+                      type={showPassword ? "text" : "password"} 
+                      value={authForm.password} 
+                      onChange={e => setAuthForm({...authForm, password: e.target.value})} 
+                      required 
+                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                    />
+                    <Button type="submit" className="w-full py-4 mt-6">Update Password <ArrowRight size={16}/></Button>
+                 </form>
+               )}
+
+               {authMode === 'login' && (
+                 <div className="flex flex-col gap-3 text-center pt-6 border-t border-slate-800 mt-6">
+                    <button type="button" onClick={() => setAuthMode('forgot')} className="text-[10px] text-blue-500 hover:text-blue-400 uppercase font-black tracking-widest transition-colors">Forgot Password?</button>
+                    <button type="button" onClick={() => setAuthMode('register')} className="text-[10px] text-slate-500 hover:text-slate-300 uppercase font-black tracking-widest transition-colors">Need an account? Register Here</button>
+                 </div>
+               )}
+               {(authMode === 'register' || authMode === 'forgot' || authMode === 'reset') && (
+                 <div className="text-center pt-6 border-t border-slate-800 mt-6">
+                    <button type="button" onClick={() => { setAuthMode('login'); setResetUserDoc(null); }} className="text-[10px] text-slate-500 hover:text-slate-300 uppercase font-black tracking-widest transition-colors">{authMode === 'reset' ? 'Cancel' : 'Already have access? Login Here'}</button>
+                 </div>
+               )}
             </Card>
           </div>
         );
@@ -1345,6 +1526,44 @@
             </div>
           )}
 
+          {showProfileModal && (
+            <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
+              <Card className="max-w-sm w-full border-[#9cd33b]/30">
+                <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+                  <div className="flex items-center gap-3 text-[#9cd33b]">
+                     <User size={20} />
+                     <h3 className="text-lg font-black uppercase tracking-widest">My Profile</h3>
+                  </div>
+                  <button onClick={() => setShowProfileModal(false)} className="text-slate-500 hover:text-slate-300"><X size={16}/></button>
+                </div>
+                <div className="space-y-4">
+                  <div><p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Username</p><p className="font-bold text-slate-200">{customUser.username}</p></div>
+                  <div><p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Email</p><p className="font-bold text-slate-200">{customUser.email || 'No email on file'}</p></div>
+                  
+                  <div className="pt-6 border-t border-slate-800 mt-2">
+                     <p className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest mb-4">Change Password</p>
+                     <div className="space-y-3">
+                         <Input 
+                           type={showPassword ? "text" : "password"} 
+                           placeholder="Current password..." 
+                           value={oldPassword} 
+                           onChange={e => setOldPassword(e.target.value)} 
+                           rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>}
+                         />
+                         <Input 
+                           type={showPassword ? "text" : "password"} 
+                           placeholder="New password..." 
+                           value={newPassword} 
+                           onChange={e => setNewPassword(e.target.value)} 
+                         />
+                     </div>
+                     <Button onClick={handleChangePassword} className="w-full mt-4 py-4" disabled={!newPassword || !oldPassword}>Update Password</Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
           <div className="w-20 lg:w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 print:hidden z-30 shadow-2xl">
             <div className="p-4 lg:p-6 border-b border-slate-800 min-w-0 flex flex-col items-center text-center">
               <div className="hidden lg:flex flex-col items-center w-full">
@@ -1370,12 +1589,25 @@
                 );
               })}
             </nav>
-            <div className="p-4 border-t border-slate-800 space-y-3 min-w-0"><div className="hidden lg:flex flex-col min-w-0"><span className="text-[10px] text-slate-400 font-bold uppercase truncate">{customUser.username}</span><span className="text-[9px] text-[#9cd33b] font-black uppercase tracking-widest truncate">{customUser.role}</span></div><button onClick={() => {setCustomUser(null); setAuthForm({...authForm, password: ''});}} className="w-full p-3 flex items-center justify-center lg:justify-start rounded-xl text-red-500 hover:bg-red-500/10 transition-all min-w-0"><LogOut size={16} className="shrink-0"/><span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest ml-3 truncate">Sign Out</span></button></div>
+            <div className="p-4 border-t border-slate-800 space-y-2 min-w-0">
+               <div className="hidden lg:flex flex-col min-w-0 mb-2">
+                 <span className="text-[10px] text-slate-400 font-bold uppercase truncate">{customUser.username}</span>
+                 <span className="text-[9px] text-[#9cd33b] font-black uppercase tracking-widest truncate">{customUser.role}</span>
+               </div>
+               <button onClick={() => setShowProfileModal(true)} className="w-full p-3 flex items-center justify-center lg:justify-start rounded-xl text-slate-400 hover:bg-slate-800 transition-all min-w-0">
+                  <User size={16} className="shrink-0"/>
+                  <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest ml-3 truncate">My Profile</span>
+               </button>
+               <button onClick={() => {setCustomUser(null); setAuthForm({...authForm, password: ''});}} className="w-full p-3 flex items-center justify-center lg:justify-start rounded-xl text-red-500 hover:bg-red-500/10 transition-all min-w-0">
+                  <LogOut size={16} className="shrink-0"/>
+                  <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest ml-3 truncate">Sign Out</span>
+               </button>
+            </div>
           </div>
           <main className="flex-1 overflow-y-auto p-6 lg:p-10 relative z-20 min-w-0">
             {activeTab === 'dashboard' && <DashboardTab fleet={company.fleet || []} company={company} customUser={customUser} logs={logs} maintRecords={maintRecords} updateFleetInfo={f => { setCompany({...company, fleet: f}); updateDoc(doc(db,'artifacts',appId,'public','data','saas_companies',customUser.companyName.toLowerCase().replace(/[^a-z0-9]/g,'-')), {fleet: f}); }} />}
             {activeTab === 'fleet' && <FleetTab company={company} setCompany={setCompany} customUser={customUser} notify={notify} />}
-            {activeTab === 'settings' && <SettingsTab company={company} setCompany={setCompany} handleCompanySettingsSave={async e => { e.preventDefault(); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_companies', customUser.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')), company); notify("Settings Saved", "success"); }} />}
+            {activeTab === 'settings' && <SettingsTab company={company} setCompany={setCompany} handleCompanySettingsSave={async e => { e.preventDefault(); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_companies', customUser.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')), company); notify("Settings Saved", "success"); }} customUser={customUser} setCustomUser={setCustomUser} notify={notify} db={db} appId={appId} />}
             {activeTab === 'customers' && <CustomersTab items={customers} logs={logs} isEditing={customerState.isEditing} state={customerState} setState={setCustomerState} onSubmit={e => genericSubmit(e, 'customers', customerState, setCustomerState, defaultCustomerState, "Customer Saved")} onCancel={() => setCustomerState({...defaultCustomerState, isEditing: false})} onDelete={deleteItem} notify={notify} />}
             {activeTab === 'products' && <ProductsTab items={products} isEditing={productState.isEditing} state={productState} setState={setProductState} onSubmit={e => genericSubmit(e, 'products', productState, setProductState, defaultProductState, "Product Saved")} onCancel={() => setProductState({...defaultProductState, isEditing: false})} onDelete={deleteItem} />}
             {activeTab === 'maintenance' && <MaintenanceTab items={maintRecords} isEditing={maintState.isEditing} state={maintState} setState={setMaintState} onSubmit={e => genericSubmit(e, 'maintenance_records', {...maintState, picUsername: customUser.username}, setMaintState, defaultMaintState, "Log Saved")} onCancel={() => setMaintState({...defaultMaintState, isEditing: false})} onDelete={deleteItem} />}
