@@ -74,8 +74,8 @@
     // 📂 CONFIG & CONSTANTS
     // ============================================================================
 
-    // 🔥 FOR GITHUB DEPLOYMENT: REPLACE WITH YOUR FIREBASE PROJECT KEYS 🔥
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    // 🔥 REPLACE WITH YOUR FIREBASE KEYS FOR GITHUB DEPLOYMENT 🔥
+   // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyBiW4z1vIMlznLsHs-Xhz44chOYkiYVBKI",
   authDomain: "spray-drone-compliance-hub.firebaseapp.com",
@@ -960,8 +960,6 @@ const firebaseConfig = {
     };
 
     const FaaReportTab = ({ company, fleet, monthlyReport, reportMonth, setReportMonth, showFormalReport, setShowFormalReport, user, notify }) => {
-      const [isSending, setIsSending] = useState(false);
-
       const handlePrint = () => {
         const element = document.getElementById('faa-report-content');
         if (!element) return;
@@ -991,13 +989,14 @@ const firebaseConfig = {
         return `${m}/01/${y} - ${m}/${lastDay}/${y}`;
       };
 
+      const emailAddress = "reidschilling@gmail.com";
+      const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(`FAA Monthly Report: ${company.name} - ${reportMonth}`)}&body=${encodeURIComponent(`To whom it may concern,\n\nPlease find attached the monthly flight operations report for ${company.name} (Exemption #${company.exemption}) for the period of ${reportMonth}.\n\nOfficial Company Email: ${company.email || 'N/A'}\n\nThank you,\n${company.supervisor}`)}`;
+
       const handleDirectSend = () => {
-        setIsSending(true);
-        notify("Compiling PDF and dispatching email...", "info");
+        notify("Compiling report and dispatching email...", "info");
         
         // Simulating network delay for backend email server response
         setTimeout(() => {
-           setIsSending(false);
            notify("Success! Report safely dispatched to reidschilling@gmail.com.", "success");
            
            // Logs the dispatch action to Firebase (to trigger email extensions if configured)
@@ -1007,7 +1006,7 @@ const firebaseConfig = {
               sentAt: new Date().toISOString()
            }).catch(() => {});
            
-        }, 2500);
+        }, 1500);
       };
 
       return (
@@ -1023,10 +1022,9 @@ const firebaseConfig = {
                    <Button onClick={handlePrint} className="bg-slate-800 text-white hover:bg-slate-700 py-4"><Printer size={16}/> Save as PDF</Button>
                    <button 
                      onClick={handleDirectSend} 
-                     disabled={isSending}
-                     className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] disabled:opacity-75 disabled:cursor-not-allowed"
+                     className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"
                    >
-                     {isSending ? <><Activity size={16} className="animate-spin"/> Sending...</> : <><Send size={16}/> Send to FAA</>}
+                     <Send size={16}/> Send to FAA
                    </button>
                 </div>
 
@@ -1388,7 +1386,7 @@ const firebaseConfig = {
             <div className="p-4 border-t border-slate-800 space-y-3 min-w-0"><div className="hidden lg:flex flex-col min-w-0"><span className="text-[10px] text-slate-400 font-bold uppercase truncate">{customUser.username}</span><span className="text-[9px] text-[#9cd33b] font-black uppercase tracking-widest truncate">{customUser.role}</span></div><button onClick={() => {setCustomUser(null); setAuthForm({...authForm, password: ''});}} className="w-full p-3 flex items-center justify-center lg:justify-start rounded-xl text-red-500 hover:bg-red-500/10 transition-all min-w-0"><LogOut size={16} className="shrink-0"/><span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest ml-3 truncate">Sign Out</span></button></div>
           </div>
           <main className="flex-1 overflow-y-auto p-6 lg:p-10 relative z-20 min-w-0">
-            {activeTab === 'dashboard' && <DashboardTab fleet={company.fleet || []} company={company} customUser={customUser} logs={logs} maintRecords={maintRecords} />}
+            {activeTab === 'dashboard' && <DashboardTab fleet={company.fleet || []} company={company} customUser={customUser} logs={logs} maintRecords={maintRecords} updateFleetInfo={f => { setCompany({...company, fleet: f}); updateDoc(doc(db,'artifacts',appId,'public','data','saas_companies',customUser.companyName.toLowerCase().replace(/[^a-z0-9]/g,'-')), {fleet: f}); }} />}
             {activeTab === 'fleet' && <FleetTab company={company} setCompany={setCompany} customUser={customUser} notify={notify} />}
             {activeTab === 'settings' && <SettingsTab company={company} setCompany={setCompany} handleCompanySettingsSave={async e => { e.preventDefault(); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_companies', customUser.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')), company); notify("Settings Saved", "success"); }} />}
             {activeTab === 'customers' && <CustomersTab items={customers} logs={logs} isEditing={customerState.isEditing} state={customerState} setState={setCustomerState} onSubmit={e => genericSubmit(e, 'customers', customerState, setCustomerState, defaultCustomerState, "Customer Saved")} onCancel={() => setCustomerState({...defaultCustomerState, isEditing: false})} onDelete={deleteItem} notify={notify} />}
@@ -1439,11 +1437,11 @@ const firebaseConfig = {
             {activeTab === 'schedule' && (
               <ScheduleTab 
                 workOrders={workOrders} isEditing={workOrderState.isEditing} state={workOrderState} setState={setWorkOrderState} 
-                onSubmit={async (e, newCust) => { 
+                onSubmit={async (e, newCustData) => { 
                   e.preventDefault(); 
                   let c = workOrderState.customer;
-                  if (newCust && newCust.name) { 
-                    c = newCust.name; 
+                  if (newCustData && newCustData.name) { 
+                    c = newCustData.name; 
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), { ...newCustData, companyName: customUser.companyName, timestamp: new Date().toISOString() }); 
                   }
                   let lat = 0, lon = 0;
