@@ -277,67 +277,96 @@
     // 📂 LEAFLET MAP COMPONENT (LIVE KML)
     // ============================================================================
     
-    const LeafletMap = ({ lat, lon, kmlData }) => {
-      const mapContainerRef = useRef(null);
-      const mapInstanceRef = useRef(null);
+   const LeafletMap = ({ lat, lon, kmlData }) => {
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const kmlLayerRef = useRef(null); // 🔑 Track KML layer separately
 
-      useEffect(() => {
-        if (!mapContainerRef.current) return;
-        
-        // Initialize map only once
-        if (!mapInstanceRef.current) {
-           mapInstanceRef.current = window.L.map(mapContainerRef.current, {
-              zoomControl: false // keep it clean
-           }).setView([lat || 39.82, lon || -98.57], lat ? 15 : 4);
-           
-           // Dark mode satellite tiles
-           window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-              attribution: 'Tiles &copy; Esri',
-              className: 'map-tiles'
-           }).addTo(mapInstanceRef.current);
-        }
+  // Cleanup map on unmount to prevent "container already initialized" errors
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
 
-        const map = mapInstanceRef.current;
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
 
-        // Clear existing markers and KML layers
-        map.eachLayer((layer) => {
-           if (layer instanceof window.L.Marker || layer instanceof window.L.GeoJSON) {
-              map.removeLayer(layer);
-           }
+    // Initialize map only once
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = window.L.map(mapContainerRef.current, {
+        zoomControl: false
+      }).setView([lat || 39.82, lon || -98.57], lat ? 15 : 4);
+
+      window.L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { attribution: 'Tiles &copy; Esri' }
+      ).addTo(mapInstanceRef.current);
+    }
+
+    const map = mapInstanceRef.current;
+
+    // 🔑 Remove previous KML layer via its own ref (reliable)
+    if (kmlLayerRef.current) {
+      map.removeLayer(kmlLayerRef.current);
+      kmlLayerRef.current = null;
+    }
+
+    // Remove old markers
+    map.eachLayer((layer) => {
+      if (layer instanceof window.L.Marker) {
+        map.removeLayer(layer);
+      }
+    });
+
+    // Add location pin
+    if (lat && lon) {
+      window.L.marker([lat, lon]).addTo(map);
+      map.setView([lat, lon], 15);
+    }
+
+    // Parse and render KML
+    if (kmlData && window.omnivore) {
+      try {
+        const customStyle = window.L.geoJson(null, {
+          style: () => ({
+            color: '#9cd33b',
+            weight: 3,
+            opacity: 1,
+            fillColor: '#9cd33b',
+            fillOpacity: 0.3
+          })
         });
 
-        // Add standard pin if lat/lon exist
-        if (lat && lon) {
-           window.L.marker([lat, lon]).addTo(map);
-           map.setView([lat, lon], 15);
-        }
+        const runLayer = window.omnivore.kml.parse(kmlData, null, customStyle);
+        runLayer.addTo(map);
+        kmlLayerRef.current = runLayer; // 🔑 Store reference for cleanup
 
-        // Try parsing KML if it exists
-        if (kmlData && window.omnivore) {
-           try {
-               const customStyle = window.L.geoJson(null, {
-                   style: function() { return { color: '#9cd33b', weight: 3, opacity: 1, fillColor: '#9cd33b', fillOpacity: 0.3 }; }
-               });
-               
-               // Omnivore parses raw XML strings natively
-               const runLayer = window.omnivore.kml.parse(kmlData, null, customStyle);
-               runLayer.addTo(map);
-               
-               // Fit map to KML bounds
-               setTimeout(() => {
-                 if (runLayer.getBounds().isValid()) {
-                     map.fitBounds(runLayer.getBounds());
-                 }
-               }, 100);
-           } catch(e) {
-               console.error('KML Parse error', e);
-           }
-        }
-      }, [lat, lon, kmlData]);
+        setTimeout(() => {
+          try {
+            const bounds = runLayer.getBounds();
+            if (bounds && bounds.isValid()) {
+              map.fitBounds(bounds, { padding: [20, 20] });
+            }
+          } catch (e) {}
+        }, 150);
+      } catch (e) {
+        console.error('KML Parse error:', e);
+      }
+    }
+  }, [lat, lon, kmlData]);
 
-      return <div ref={mapContainerRef} className="w-full h-full rounded-[2.5rem] overflow-hidden bg-slate-900 border border-slate-800" style={{minHeight: '300px', zIndex: 1}} />;
-    };
-
+  return (
+    <div
+      ref={mapContainerRef}
+      className="w-full h-full rounded-[2.5rem] overflow-hidden bg-slate-900 border border-slate-800"
+      style={{ minHeight: '300px', zIndex: 1 }}
+    />
+  );
+};
     // ============================================================================
     // 📂 MODULAR TAB COMPONENTS
     // ============================================================================
