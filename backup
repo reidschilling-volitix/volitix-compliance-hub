@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SprayOps</title>
+  <title>SprayOps | Flight Command Center</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,16 +38,44 @@
       margin: 0; 
       padding: 0; 
       background-color: #020617 !important; 
-      background-image: 
-        radial-gradient(circle at 15% 50%, rgba(156, 211, 59, 0.04), transparent 25%), 
-        radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.04), transparent 25%);
       color: #e2e8f0 !important; 
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
+
+    /* Organic Branching Lightning Background */
+    .bg-lightning-container {
+      position: fixed;
+      inset: 0;
+      background-color: #01040f;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .lightning-veins {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='1200'%3E%3Cfilter id='lf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.055' numOctaves='5' result='n'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='n' scale='45' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Cg filter='url(%23lf)' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke='%23fef08a' opacity='0.4' stroke-width='6' filter='blur(5px)'%3E%3Cpath d='M100,-50 L120,50 L90,120 L150,250 L130,400 L180,550 L160,700 L220,850 L210,1000' /%3E%3Cpath d='M1100,150 L980,300 L1020,450 L850,600 L900,800 L750,1100' /%3E%3C/g%3E%3Cg stroke='%23fef08a' opacity='0.9' stroke-width='1.5'%3E%3Cpath d='M100,-50 L120,50 L90,120 L150,250 L130,400 L180,550 L160,700 L220,850 L210,1000' /%3E%3Cpath d='M150,250 L250,220 L320,280 L450,240' /%3E%3Cpath d='M130,400 L50,450 L-50,420' /%3E%3Cpath d='M180,550 L300,520 L380,580 L550,540 L620,600' /%3E%3Cpath d='M1100,150 L980,300 L1020,450 L850,600 L900,800 L750,1100' /%3E%3Cpath d='M980,300 L850,280 L750,320 L620,280' /%3E%3Cpath d='M850,600 L950,580 L1050,620' /%3E%3Cpath d='M900,800 L750,780 L650,820 L500,780 L400,850' /%3E%3Cpath d='M-100,700 L50,680 L120,740 L250,710 L350,760 L500,720 L650,780 L800,740 L950,800 L1100,760' /%3E%3Cpath d='M250,710 L280,600 L220,500 L300,400 L250,300' /%3E%3Cpath d='M650,780 L680,650 L620,500 L750,350' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      background-size: 1200px 1200px;
+      animation: slow-pulse 20s infinite ease-in-out;
+    }
+
+    @keyframes slow-pulse {
+      0%, 100% { opacity: 0.15; filter: brightness(0.6); }
+      50% { opacity: 0.30; filter: brightness(1.1); }
+    }
+
+    .glass-card {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    
     @media print {
       body { background-color: white !important; color: black !important; background-image: none !important; }
       .print\:p-0 { padding: 0 !important; }
@@ -56,10 +84,10 @@
       .print\:bg-transparent { background-color: transparent !important; }
       .print\:border-none { border: none !important; }
     }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
     
-    /* Custom Leaflet Map styling for dark mode */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+    
     .leaflet-container { background: #0f172a; font-family: inherit; }
     .leaflet-bar a { background-color: #1e293b; color: #e2e8f0; border-color: #334155; }
     .leaflet-bar a:hover { background-color: #334155; }
@@ -81,14 +109,15 @@
     } from 'lucide-react';
 
     import { initializeApp } from 'firebase/app';
-    import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, setDoc, getDocs, getDoc, updateDoc, enableIndexedDbPersistence } from 'firebase/firestore';
+    import { 
+      getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, setDoc, getDocs, getDoc, updateDoc, enableIndexedDbPersistence 
+    } from 'firebase/firestore';
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 
     // ============================================================================
     // 📂 CONFIG & CONSTANTS
     // ============================================================================
 
-    // 🔥 REPLACE WITH YOUR FIREBASE KEYS FOR GITHUB DEPLOYMENT 🔥
     const fallbackConfig = {
       apiKey: "AIzaSyBiW4z1vIMlznLsHs-Xhz44chOYkiYVBKI",
       authDomain: "spray-drone-compliance-hub.firebaseapp.com",
@@ -105,7 +134,6 @@
     const db = getFirestore(app);
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'aviation-compliance-hub';
 
-    // 🔥 INITIALIZE PWA OFFLINE MODE (Data Caching) 🔥
     try {
        enableIndexedDbPersistence(db).catch((err) => {
            console.warn("Offline persistence warning:", err.code);
@@ -118,7 +146,7 @@
       { label: "Mountain (MST/MDT)", offset: -7 }, { label: "Pacific (PST/PDT)", offset: -8 }
     ];
 
-    const defaultWorkOrderState = { title: '', customer: '', date: '', acres: '', kmlFileName: '', kmlData: null, status: 'Pending', isScheduled: false, coordType: 'Decimal', latDec: '', lonDec: '', latDecDir: 'N', lonDecDir: 'W', latDMS: { d: '', m: '', s: '', dir: 'N' }, lonDMS: { d: '', m: '', s: '', dir: 'W' } };
+    const defaultWorkOrderState = { title: '', customer: '', date: new Date().toLocaleDateString('en-CA'), acres: '', chemical: '', kmlFileName: '', kmlData: null, status: 'Pending', isScheduled: false, coordType: 'Decimal', latDec: '', lonDec: '', latDecDir: 'N', lonDecDir: 'W', latDMS: { d: '', m: '', s: '', dir: 'N' }, lonDMS: { d: '', m: '', s: '', dir: 'W' } };
     
     const defaultLogState = { 
       date: new Date().toLocaleDateString('en-CA'), startTime: '08:00', endTime: '10:00', selectedAircraft: [], customer: '', locationName: '', 
@@ -127,7 +155,7 @@
       latDMS: { d: '', m: '', s: '', dir: 'N' }, lonDMS: { d: '', m: '', s: '', dir: 'W' }, coordinates: '', 
       chemical: '', appRate: '', windSpeed: '', windDirection: 'N', temp: '', tempUnit: 'F', humidity: '', 
       incidents: 'None', damageDescription: '', flightTimeValue: '', flightTimeUnit: 'Hours', flightTimeMinutes: '', 
-      kmlData: null, kmlFileName: '' 
+      kmlData: null, kmlFileName: '', attachedNotam: ''
     };
     
     const defaultMaintState = { date: new Date().toLocaleDateString('en-CA'), equipmentType: 'Drone', customEquipment: '', assetId: '', workPerformed: '' };
@@ -136,10 +164,16 @@
     const defaultProductState = { name: '', defaultRate: '', inventory: '', description: '' };
     const defaultNotamState = { date: new Date().toLocaleDateString('en-CA'), notamNumber: '', script: '', localStartTime: '08:00', duration: '4', radius: '0.5', coordType: 'Decimal', latDec: '', lonDec: '', latDecDir: 'N', lonDecDir: 'W', latDMS: { d: '', m: '', s: '', dir: 'N' }, lonDMS: { d: '', m: '', s: '', dir: 'W' } };
 
+    // ============================================================================
+    // 📂 GLOBAL HELPER FUNCTIONS
+    // ============================================================================
+
     const formatToNotamDMS = (input, isLon = false) => {
       if (!input) return "000000";
       const parts = input.toString().trim().split(/\s+/);
-      let decimal = parts.length >= 2 ? Math.abs(parseFloat(parts[0]) || 0) + ((parseFloat(parts[1]) || 0) / 60) + ((parseFloat(parts[2]) || 0) / 3600) : Math.abs(parseFloat(input));
+      let decimal = parts.length >= 2 
+        ? Math.abs(parseFloat(parts[0]) || 0) + ((parseFloat(parts[1]) || 0) / 60) + ((parseFloat(parts[2]) || 0) / 3600) 
+        : Math.abs(parseFloat(input));
       if (isNaN(decimal)) return "000000";
       const degrees = Math.floor(decimal), minutes = Math.floor((decimal - degrees) * 60), seconds = Math.round((decimal - degrees - (minutes / 60)) * 3600);
       return `${degrees.toString().padStart(isLon ? 3 : 2, '0')}${minutes.toString().padStart(2, '0')}${seconds.toString().padStart(2, '0')}`;
@@ -164,8 +198,8 @@
       document.body.appendChild(textArea);
       textArea.focus();
       textArea.select();
-      try {
-        document.execCommand('copy');
+      try { 
+        document.execCommand('copy'); 
       } catch (err) {
         console.error('Fallback: Oops, unable to copy', err);
       }
@@ -176,22 +210,20 @@
     // 📂 REUSABLE UI COMPONENTS
     // ============================================================================
 
-    const GlobalStyles = () => (
+    const GlobalStylesComp = () => (
       <style>{`
-        body { background-color: #020617 !important; color: #e2e8f0 !important; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        @media print { body { background: white !important; color: black !important; } .print\\:hidden { display: none !important; } .print\\:p-0 { padding: 0 !important; } .print\\:shadow-none { box-shadow: none !important; } .print\\:border-none { border: none !important; } }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* Global utility classes injected here */
       `}</style>
     );
 
     const Toast = ({ notification }) => {
       if (!notification.show) return null;
       return (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[250] px-6 py-3.5 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] font-black uppercase tracking-widest text-[11px] flex items-center gap-3 animate-fade-in border ${notification.type === 'error' ? 'bg-red-950/90 border-red-500/50 text-red-400 backdrop-blur-md' : notification.type === 'success' ? 'bg-[#9cd33b]/10 border-[#9cd33b]/50 text-[#9cd33b] backdrop-blur-md' : 'bg-blue-950/90 border-blue-500/50 text-blue-400 backdrop-blur-md'}`}>
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[250] px-6 py-3.5 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] font-black uppercase tracking-widest text-[11px] flex items-center gap-3 animate-fade-in border ${
+          notification.type === 'error' ? 'bg-red-950/90 border-red-500/50 text-red-400 backdrop-blur-md' : 
+          notification.type === 'success' ? 'bg-[#9cd33b]/10 border-[#9cd33b]/50 text-[#9cd33b] backdrop-blur-md' : 
+          'bg-blue-950/90 border-blue-500/50 text-blue-400 backdrop-blur-md'
+        }`}>
           {notification.type === 'error' ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
           {String(notification.message)}
         </div>
@@ -199,7 +231,7 @@
     };
 
     const Card = ({ children, className = "" }) => (
-      <div className={`bg-gradient-to-br from-slate-900 to-slate-900/90 border border-slate-700/30 p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.25)] backdrop-blur-md relative overflow-hidden ${className}`}>
+      <div className={`glass-card p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.25)] backdrop-blur-md relative overflow-hidden ${className}`}>
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-600/30 to-transparent"></div>
         {children}
       </div>
@@ -224,7 +256,11 @@
       <div className="space-y-2 min-w-0 group">
         {label && <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block group-focus-within:text-[#9cd33b] transition-colors">{label}</label>}
         <div className="relative">
-          <input type={type} className={`w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b]/60 focus:ring-4 focus:ring-[#9cd33b]/10 focus:bg-slate-900 transition-all duration-300 min-w-0 shadow-inner ${className} ${rightElement ? 'pr-12' : ''}`} {...props} />
+          <input 
+            type={type} 
+            className={`w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b]/60 focus:ring-4 focus:ring-[#9cd33b]/10 focus:bg-slate-900 transition-all duration-300 min-w-0 shadow-inner ${className} ${rightElement ? 'pr-12' : ''}`} 
+            {...props} 
+          />
           {rightElement && <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">{rightElement}</div>}
         </div>
       </div>
@@ -233,26 +269,45 @@
     const Select = ({ label, children, className="", ...props }) => (
       <div className="space-y-2 min-w-0 group">
         {label && <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block group-focus-within:text-[#9cd33b] transition-colors">{label}</label>}
-        <select className={`w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b]/60 focus:ring-4 focus:ring-[#9cd33b]/10 focus:bg-slate-900 transition-all duration-300 min-w-0 shadow-inner ${className}`} {...props}>{children}</select>
+        <select 
+          className={`w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b]/60 focus:ring-4 focus:ring-[#9cd33b]/10 focus:bg-slate-900 transition-all duration-300 min-w-0 shadow-inner ${className}`} 
+          {...props}
+        >
+          {children}
+        </select>
       </div>
     );
 
     const TextArea = ({ label, className="", ...props }) => (
       <div className="space-y-2 min-w-0 group">
         {label && <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block group-focus-within:text-[#9cd33b] transition-colors">{label}</label>}
-        <textarea className={`w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b]/60 focus:ring-4 focus:ring-[#9cd33b]/10 focus:bg-slate-900 transition-all duration-300 h-32 resize-none min-w-0 shadow-inner ${className}`} {...props} />
+        <textarea 
+          className={`w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b]/60 focus:ring-4 focus:ring-[#9cd33b]/10 focus:bg-slate-900 transition-all duration-300 h-32 resize-none min-w-0 shadow-inner ${className}`} 
+          {...props} 
+        />
       </div>
     );
 
     const FormCard = ({ title, icon: Icon, onSubmit, onCancel, submitLabel, children }) => (
       <div className="space-y-6 animate-fade-in">
-        {onCancel && <div className="flex"><button type="button" onClick={onCancel} className="flex items-center gap-2 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-widest bg-slate-900 border border-slate-800 px-5 py-3 rounded-xl transition-colors hover:bg-slate-800"><X size={14} /> Cancel Edit</button></div>}
+        {onCancel && (
+          <div className="flex">
+            <button type="button" onClick={onCancel} className="flex items-center gap-2 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-widest bg-slate-900 border border-slate-800 px-5 py-3 rounded-xl transition-colors hover:bg-slate-800">
+              <X size={14} /> Cancel Edit
+            </button>
+          </div>
+        )}
         <Card className="border-[#9cd33b]/20">
           <div className="flex items-center gap-4 text-[#9cd33b] font-black uppercase text-xs tracking-widest border-b border-slate-800 pb-6 mb-8 flex-wrap">
             {Icon && <div className="p-2.5 bg-[#9cd33b]/10 rounded-xl shadow-[0_0_15px_rgba(156,211,59,0.15)]"><Icon size={20} className="shrink-0" strokeWidth={2.5} /></div>} 
             <span className="truncate">{title}</span>
           </div>
-          <form onSubmit={onSubmit} className="space-y-8">{children}<div className="pt-8 border-t border-slate-800"><Button type="submit" className="w-full py-5 text-sm">{submitLabel || 'Save Record'}</Button></div></form>
+          <form onSubmit={onSubmit} className="space-y-8">
+            {children}
+            <div className="pt-8 border-t border-slate-800">
+              <Button type="submit" className="w-full py-5 text-sm">{submitLabel || 'Save Record'}</Button>
+            </div>
+          </form>
         </Card>
       </div>
     );
@@ -261,15 +316,22 @@
       <div className="space-y-8 animate-fade-in">
         <Card className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 !p-6 border-[#9cd33b]/20">
           <div className="flex items-center gap-5 min-w-0 flex-1">
-            <div className="p-4 bg-gradient-to-br from-[#9cd33b]/20 to-[#9cd33b]/5 border border-[#9cd33b]/30 rounded-[1.5rem] text-[#9cd33b] shrink-0 shadow-[0_0_15px_rgba(156,211,59,0.15)]">{Icon && <Icon size={28} strokeWidth={2.5} />}</div>
-            <div className="min-w-0"><h2 className="text-xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-100 to-slate-400 truncate">{title}</h2><p className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest mt-1 truncate">Manage Database Records</p></div>
+            <div className="p-4 bg-gradient-to-br from-[#9cd33b]/20 to-[#9cd33b]/5 border border-[#9cd33b]/30 rounded-[1.5rem] text-[#9cd33b] shrink-0 shadow-[0_0_15px_rgba(156,211,59,0.15)]">
+              {Icon && <Icon size={28} strokeWidth={2.5} />}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-100 to-slate-400 truncate">{title}</h2>
+              <p className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest mt-1 truncate">Manage Database Records</p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-3 w-full md:w-auto shrink-0">
             {onSecondaryAction && <Button variant="secondary" onClick={onSecondaryAction}>{secondaryActionLabel}</Button>}
             {onAction && <Button onClick={onAction} className="flex-1 md:flex-none"><Plus size={16}/> {actionLabel}</Button>}
           </div>
         </Card>
-        <div className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-[3rem] overflow-hidden shadow-2xl"><div className="overflow-x-auto">{children}</div></div>
+        <div className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-[3rem] overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">{children}</div>
+        </div>
       </div>
     );
 
@@ -277,9 +339,10 @@
     // 📂 LEAFLET MAP COMPONENT (LIVE KML)
     // ============================================================================
     
-    const LeafletMap = ({ lat, lon, kmlData }) => {
+    const LeafletMap = ({ lat, lon, kmlData, jobs = [], selectedJob = null }) => {
       const mapContainerRef = useRef(null);
       const mapInstanceRef = useRef(null);
+      const featureGroupRef = useRef(null);
 
       useEffect(() => {
         if (!mapContainerRef.current) return;
@@ -295,45 +358,56 @@
               attribution: 'Tiles &copy; Esri',
               className: 'map-tiles'
            }).addTo(mapInstanceRef.current);
+
+           featureGroupRef.current = window.L.featureGroup().addTo(mapInstanceRef.current);
         }
 
         const map = mapInstanceRef.current;
+        const fg = featureGroupRef.current;
+        fg.clearLayers();
 
-        // Clear existing markers and KML layers
-        map.eachLayer((layer) => {
-           if (layer instanceof window.L.Marker || layer instanceof window.L.GeoJSON) {
-              map.removeLayer(layer);
+        let hasLayers = false;
+
+        const itemsToPlot = jobs.length > 0 ? jobs : [];
+        if (jobs.length === 0 && (lat || kmlData)) {
+            itemsToPlot.push({ finalLat: lat, finalLon: lon, kmlData, id: 'single' });
+        }
+
+        itemsToPlot.forEach(job => {
+           const isSelected = selectedJob ? selectedJob.id === job.id : true;
+           const color = isSelected ? '#9cd33b' : '#3b82f6'; // Green if selected, Blue if background job
+           
+           // Add standard pin if lat/lon exist
+           if (job.finalLat && job.finalLon && !isNaN(job.finalLat) && !isNaN(job.finalLon)) {
+               const marker = window.L.marker([job.finalLat, job.finalLon]);
+               if (job.title || job.customer) marker.bindPopup(`<b>${job.title || job.customer}</b>`);
+               fg.addLayer(marker);
+               hasLayers = true;
+           }
+
+           // Try parsing KML if it exists
+           if (job.kmlData && window.omnivore) {
+               try {
+                   const customStyle = window.L.geoJson(null, {
+                       style: function() { return { color: color, weight: isSelected ? 4 : 2, opacity: 1, fillColor: color, fillOpacity: isSelected ? 0.4 : 0.1 }; }
+                   });
+                   const runLayer = window.omnivore.kml.parse(job.kmlData, null, customStyle);
+                   fg.addLayer(runLayer);
+                   hasLayers = true;
+               } catch(e) {
+                   console.error('KML Parse error', e);
+               }
            }
         });
 
-        // Add standard pin if lat/lon exist
-        if (lat && lon) {
-           window.L.marker([lat, lon]).addTo(map);
-           map.setView([lat, lon], 15);
+        if (hasLayers) {
+            setTimeout(() => {
+                if (fg.getBounds().isValid()) {
+                    map.fitBounds(fg.getBounds(), { padding: [20, 20], maxZoom: 16 });
+                }
+            }, 100);
         }
-
-        // Try parsing KML if it exists
-        if (kmlData && window.omnivore) {
-           try {
-               const customStyle = window.L.geoJson(null, {
-                   style: function() { return { color: '#9cd33b', weight: 3, opacity: 1, fillColor: '#9cd33b', fillOpacity: 0.3 }; }
-               });
-               
-               // Omnivore parses raw XML strings natively
-               const runLayer = window.omnivore.kml.parse(kmlData, null, customStyle);
-               runLayer.addTo(map);
-               
-               // Fit map to KML bounds
-               setTimeout(() => {
-                 if (runLayer.getBounds().isValid()) {
-                     map.fitBounds(runLayer.getBounds());
-                 }
-               }, 100);
-           } catch(e) {
-               console.error('KML Parse error', e);
-           }
-        }
-      }, [lat, lon, kmlData]);
+      }, [lat, lon, kmlData, jobs, selectedJob]);
 
       return <div ref={mapContainerRef} className="w-full h-full rounded-[2.5rem] overflow-hidden bg-slate-900 border border-slate-800" style={{minHeight: '300px', zIndex: 1}} />;
     };
@@ -410,9 +484,9 @@
                    </div>
                    {editingDrone === idx && (
                      <div className="mt-4 pt-6 border-t border-slate-800 space-y-4">
-                       <Input label="N-Number" placeholder="N-Number" value={d.id} onChange={e => { const f = [...company.fleet]; f[idx].id = e.target.value; setCompany({...company, fleet: f}); }} />
-                       <Input label="Model" placeholder="Model" value={d.model} onChange={e => { const f = [...company.fleet]; f[idx].model = e.target.value; setCompany({...company, fleet: f}); }} />
-                       <Input label="Serial Number" placeholder="S/N" value={d.sn} onChange={e => { const f = [...company.fleet]; f[idx].sn = e.target.value; setCompany({...company, fleet: f}); }} />
+                       <Input label="N-Number" value={d.id} onChange={e => { const f = [...company.fleet]; f[idx].id = e.target.value; setCompany({...company, fleet: f}); }} />
+                       <Input label="Model" value={d.model} onChange={e => { const f = [...company.fleet]; f[idx].model = e.target.value; setCompany({...company, fleet: f}); }} />
+                       <Input label="Serial Number" value={d.sn} onChange={e => { const f = [...company.fleet]; f[idx].sn = e.target.value; setCompany({...company, fleet: f}); }} />
                        <div className="flex gap-3 pt-4 border-t border-slate-800">
                          <Button variant="secondary" className="flex-1 py-4 text-xs" onClick={() => { setEditingDrone(null); saveFleet(company.fleet); }}>Close</Button>
                          <Button variant="danger" className="py-4 px-6 shrink-0" onClick={() => { const f = company.fleet.filter((_, i) => i !== idx); saveFleet(f); setEditingDrone(null); }}><Trash2 size={16}/></Button>
@@ -495,11 +569,13 @@
       );
     };
 
-    const ScheduleTab = ({ workOrders, isEditing, state, setState, onCancel, onSubmit, customers, customUser, handleDrop, getStatusColor, deleteItem, notify }) => {
+    const ScheduleTab = ({ workOrders, isEditing, state, setState, onCancel, onSubmit, customers, products, customUser, handleDrop, getStatusColor, deleteItem, notify, onLogMission }) => {
       const [viewMode, setViewMode] = useState('calendar');
       const [calendarBaseDate, setCalendarBaseDate] = useState(new Date());
       const [inlineCustomer, setInlineCustomer] = useState(false);
       const [newCustData, setNewCustData] = useState(defaultCustomerState);
+      const [inlineProduct, setInlineProduct] = useState(false);
+      const [newProdData, setNewProdData] = useState(defaultProductState);
       const [selectedMapJob, setSelectedMapJob] = useState(null);
       const kmlRef = useRef(null);
 
@@ -520,11 +596,11 @@
       const scheduleStats = useMemo(() => {
          const endOfWeek = new Date(weekDays[0]); endOfWeek.setDate(weekDays[0].getDate() + 6);
          return {
-            unscheduled: workOrders.filter(w => !w.isScheduled).length,
-            unscheduledJobs: workOrders.filter(w => !w.isScheduled),
-            thisWeekCount: workOrders.filter(w => w.isScheduled && new Date(w.date) >= weekDays[0] && new Date(w.date) <= endOfWeek).length,
-            activeCount: workOrders.filter(w => w.status === 'Scheduled' || w.status === 'In Progress').length,
-            schedAcres: workOrders.filter(w => w.status === 'Scheduled' || w.status === 'In Progress').reduce((a, w) => a + (parseFloat(w.acres)||0), 0),
+            unscheduled: workOrders.filter(w => !w.date || w.status === 'Pending').length,
+            unscheduledJobs: workOrders.filter(w => !w.date || w.status === 'Pending'),
+            thisWeekCount: workOrders.filter(w => w.date && new Date(w.date) >= weekDays[0] && new Date(w.date) <= endOfWeek).length,
+            activeCount: workOrders.filter(w => w.status === 'Pending').length,
+            schedAcres: workOrders.filter(w => w.status === 'Pending').reduce((a, w) => a + (parseFloat(w.acres)||0), 0),
             compAcres: workOrders.filter(w => w.status === 'Completed').reduce((a, w) => a + (parseFloat(w.acres)||0), 0)
          };
       }, [workOrders, weekDays]);
@@ -534,7 +610,7 @@
 
       if (isEditing) {
         return (
-          <FormCard title={state.id ? "Edit Work Order" : "Create Work Order"} icon={CalendarDays} onSubmit={(e) => onSubmit(e, inlineCustomer ? newCustData : null)} onCancel={onCancel} submitLabel="Save Schedule">
+          <FormCard title={state.id ? "Edit Work Order" : "Create Work Order"} icon={CalendarDays} onSubmit={(e) => onSubmit(e, inlineCustomer ? newCustData : null, inlineProduct ? newProdData : null)} onCancel={onCancel} submitLabel={state.status === 'Completed' ? "Save & Log Mission" : "Save Schedule"}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
               <Input label="Job Title" value={state.title} onChange={e => setState({...state, title: e.target.value})} required placeholder="e.g. Field 1 Spray"/>
               <Select label="Customer" value={inlineCustomer ? 'ADD_NEW' : state.customer} onChange={e => { if(e.target.value === 'ADD_NEW') setInlineCustomer(true); else { setInlineCustomer(false); setState({...state, customer: e.target.value}); } }} required>
@@ -562,8 +638,29 @@
                 </div>
               )}
               
-              <Input type="date" label="Scheduled Date" value={state.date} onChange={e => setState({...state, date: e.target.value})} />
+              <Input type="date" label="Scheduled Date (Optional)" value={state.date} onChange={e => setState({...state, date: e.target.value})} />
               <Input type="number" label="Acreage" value={state.acres} onChange={e => setState({...state, acres: e.target.value})} required/>
+              
+              <div className="flex flex-col gap-2 min-w-0 md:col-span-2">
+                 <Select label="Chemical / Product" value={inlineProduct ? 'ADD_NEW' : (state.chemical || '')} onChange={e => { if(e.target.value === 'ADD_NEW') setInlineProduct(true); else { setInlineProduct(false); setState({...state, chemical: e.target.value}); } }} required>
+                    <option className="bg-slate-900" value="" disabled>Select Product...</option>
+                    {products.map(p => <option className="bg-slate-900" key={p.id} value={p.name}>{String(p.name)}</option>)}
+                    <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">+ Create New Product</option>
+                 </Select>
+                 {inlineProduct && (
+                    <div className="p-6 bg-slate-950 border border-[#9cd33b]/50 rounded-2xl space-y-4 min-w-0 mt-2">
+                       <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-2">
+                          <span className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest truncate pr-2">New Product Profile</span>
+                          <Button variant="secondary" onClick={() => setInlineProduct(false)} className="py-2 px-3 shrink-0"><X size={14}/></Button>
+                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Input label="Chemical Name" value={newProdData.name} onChange={e => setNewProdData({...newProdData, name: e.target.value})} required/>
+                          <Input label="Default Rate" type="number" step="any" value={newProdData.defaultRate} onChange={e => setNewProdData({...newProdData, defaultRate: e.target.value})} required rightElement={<span className="text-[9px] text-slate-500 font-black">oz/ac</span>} />
+                          <Input label="Current Inventory" type="number" step="any" value={newProdData.inventory} onChange={e => setNewProdData({...newProdData, inventory: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">Gal</span>} />
+                       </div>
+                    </div>
+                 )}
+              </div>
             </div>
             
             <div className="bg-slate-950 p-8 rounded-3xl border border-slate-800 space-y-6 min-w-0">
@@ -588,7 +685,10 @@
                <div className="pt-4 border-t border-slate-800 min-w-0"><label className="text-[10px] text-slate-400 font-black uppercase mb-2 flex items-center gap-1 truncate"><Paperclip size={10} className="shrink-0"/> Boundary (KML)</label><div className="flex flex-col sm:flex-row gap-2 min-w-0"><button type="button" onClick={() => kmlRef.current?.click()} className="bg-slate-900 border border-slate-800 text-slate-300 p-4 rounded-2xl flex-1 text-xs font-black uppercase truncate min-w-0">{state.kmlFileName || 'Attach Text KML'}</button>{state.kmlFileName && <Button variant="danger" className="shrink-0" onClick={() => { setState({...state, kmlData: null, kmlFileName: ''}); if(kmlRef.current) kmlRef.current.value=""; }}><X size={16}/></Button>}<input type="file" accept=".kml" ref={kmlRef} className="hidden" onChange={handleKml}/></div></div>
             </div>
             <Select label="Job Status" value={state.status} onChange={e => setState({...state, status: e.target.value})}>
-              <option className="bg-slate-900" value="Pending">Pending</option><option className="bg-slate-900" value="Scheduled">Scheduled</option><option className="bg-slate-900" value="In Progress">In Progress</option><option className="bg-slate-900" value="Paused">Paused (Weather Hold)</option><option className="bg-slate-900" value="Completed">Completed</option><option className="bg-slate-900" value="Cancelled">Cancelled</option>
+              <option className="bg-slate-900" value="Pending">Pending Dispatch</option>
+              <option className="bg-slate-900" value="Paused">Paused (Weather Hold)</option>
+              <option className="bg-slate-900" value="Completed">Completed</option>
+              <option className="bg-slate-900" value="Cancelled">Cancelled</option>
             </Select>
           </FormCard>
         );
@@ -597,7 +697,7 @@
       return (
         <div className="space-y-6 animate-fade-in min-w-0">
            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 min-w-0">
-             <div className="min-w-0"><h2 className="text-3xl font-black uppercase tracking-tighter text-slate-100 flex items-center gap-3 truncate"><CalendarDays className="text-[#9cd33b] shrink-0"/> Operations</h2><p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2 truncate">Manage your schedule</p></div>
+             <div className="min-w-0"><h2 className="text-3xl font-black uppercase tracking-tighter text-white flex items-center gap-3 truncate"><CalendarDays className="text-[#9cd33b] shrink-0"/> Operations</h2><p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2 truncate">Manage your schedule</p></div>
              <div className="flex flex-wrap gap-4 shrink-0">
                <div className="flex bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm p-1">
                  <button onClick={() => setViewMode('calendar')} className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest ${viewMode === 'calendar' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}><LayoutTemplate size={14}/> Calendar</button>
@@ -629,7 +729,11 @@
                           <div className="flex justify-between items-start mb-2 gap-2 min-w-0"><span className="text-[10px] font-black text-slate-200 uppercase truncate block">{String(job.title || job.customer)}</span><GripVertical size={14} className="text-slate-600 shrink-0"/></div>
                           <p className="text-xs font-bold text-slate-400 truncate">{String(job.customer)}</p>
                           <p className="text-[9px] text-slate-500 font-mono mt-1 truncate">{String(job.acres)} AC</p>
-                          <div className="flex justify-end gap-2 mt-2"><button onClick={() => setState({...job, isEditing: true})} className="text-blue-500 hover:text-blue-400"><Edit3 size={12}/></button><button onClick={() => deleteItem('work_orders', job.id)} className="text-red-500 hover:text-red-400"><Trash2 size={12}/></button></div>
+                          <div className="flex justify-end gap-2 mt-2">
+                             <button onClick={(e) => { e.stopPropagation(); onLogMission(job); }} title="Log Mission" className="text-[#9cd33b] hover:text-[#bce455]"><ClipboardCheck size={12}/></button>
+                             <button onClick={(e) => { e.stopPropagation(); setState({...job, isEditing: true}); }} className="text-blue-500 hover:text-blue-400"><Edit3 size={12}/></button>
+                             <button onClick={(e) => { e.stopPropagation(); deleteItem('work_orders', job.id); }} className="text-red-500 hover:text-red-400"><Trash2 size={12}/></button>
+                          </div>
                         </div>
                       ))
                     )}
@@ -651,7 +755,13 @@
                           <div className={`p-2 lg:p-4 text-center border-b border-slate-800 ${isToday ? 'bg-[#9cd33b] text-[#020617]' : 'text-slate-400'}`}><p className="text-[9px] font-black uppercase tracking-widest mb-1">{date.toLocaleDateString('en-US', { weekday: 'short' })}</p><p className="text-xl font-black">{date.getDate()}</p></div>
                           <div className="flex-1 p-2 space-y-2 overflow-y-auto">
                             {dayJobs.map(job => (
-                              <div key={job.id} onClick={() => setState({...job, isEditing: true})} className={`p-2 lg:p-3 rounded-xl text-[9px] lg:text-[10px] shadow-sm border cursor-pointer hover:opacity-80 transition-opacity min-w-0 ${getStatusColor(job.status)}`}><div className="font-black uppercase truncate mb-1 block">{String(job.title || job.customer)}</div><div className="font-bold opacity-80 font-mono truncate block">{String(job.acres)} AC</div></div>
+                              <div key={job.id} onClick={() => setState({...job, isEditing: true})} className={`p-2 lg:p-3 rounded-xl text-[9px] lg:text-[10px] shadow-sm border cursor-pointer hover:opacity-80 transition-opacity min-w-0 ${getStatusColor(job.status)}`}>
+                                 <div className="flex justify-between items-start">
+                                    <span className="font-black uppercase truncate mb-1 block">{String(job.title || job.customer)}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); onLogMission(job); }} title="Log Mission" className={`${getStatusColor(job.status).includes('bg-[#9cd33b]/10') ? 'text-[#9cd33b] hover:text-white' : 'text-white hover:text-[#9cd33b]'} shrink-0`}><ClipboardCheck size={12}/></button>
+                                 </div>
+                                 <div className="font-bold opacity-80 font-mono truncate block">{String(job.acres)} AC</div>
+                              </div>
                             ))}
                             <div onClick={() => setState({...defaultWorkOrderState, date: strDate, isScheduled: true, isEditing: true})} className="w-full h-8 lg:h-10 border border-dashed border-slate-700 rounded-xl flex items-center justify-center text-slate-600 hover:border-slate-500 cursor-pointer transition-colors mt-2"><span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><Plus size={10}/> Add</span></div>
                           </div>
@@ -662,25 +772,25 @@
                </div>
              </div>
            ) : (
-             <div className="flex flex-col md:flex-row gap-6 h-[600px] min-w-0">
-                <div className="w-full md:w-80 bg-slate-900 border border-slate-800 rounded-[2.5rem] flex flex-col overflow-hidden shadow-xl shrink-0">
+             <div className="flex flex-col lg:flex-row gap-8 h-[600px] min-w-0">
+                <div className="w-full lg:w-80 bg-slate-900 border border-slate-800 rounded-[2.5rem] flex flex-col overflow-hidden shadow-xl shrink-0">
                   <div className="p-6 border-b border-slate-800 bg-slate-900/50 min-w-0"><h3 className="font-black uppercase tracking-widest text-slate-100 text-xs truncate">Mapped Locations</h3></div>
                   <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                     {workOrders.filter(w => w.finalLat && w.finalLon).map(job => (
+                     {workOrders.filter(w => w.finalLat || w.kmlData).map(job => (
                        <div key={job.id} onClick={() => setSelectedMapJob(job)} className={`p-5 rounded-2xl cursor-pointer transition-colors border shadow-sm min-w-0 ${selectedMapJob?.id === job.id ? 'bg-slate-800 border-[#9cd33b]' : 'bg-slate-950 border-slate-800 hover:border-slate-700'}`}>
                           <div className="flex justify-between items-start mb-2 gap-2 min-w-0"><p className="text-[11px] font-black text-slate-200 uppercase truncate block">{String(job.title || job.customer)}</p><button onClick={(e) => { e.stopPropagation(); setState({...job, isEditing: true}); }} className="text-blue-500 shrink-0"><Edit3 size={14}/></button></div>
-                          <p className="text-[9px] text-slate-500 font-mono mt-1 bg-slate-900 p-2 rounded-lg inline-block truncate max-w-full">{String(job.finalLat)}, {String(job.finalLon)}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-3 tracking-widest truncate">{String(job.date)} | {String(job.acres)} AC</p>
+                          <p className="text-[9px] text-slate-500 font-mono mt-1 bg-slate-900 p-2 rounded-lg inline-block truncate max-w-full">{job.finalLat ? `${String(job.finalLat)}, ${String(job.finalLon)}` : 'KML Boundary Attached'}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-3 tracking-widest truncate">{String(job.date || 'Backlog')} | {String(job.acres)} AC</p>
                        </div>
                      ))}
-                     {workOrders.filter(w => w.finalLat && w.finalLon).length === 0 && <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center mt-10">No mapped work orders</p>}
+                     {workOrders.filter(w => w.finalLat || w.kmlData).length === 0 && <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center mt-10">No mapped work orders</p>}
                   </div>
                 </div>
                 <div className="flex-1 bg-slate-950 rounded-[2.5rem] relative min-w-0 p-1">
-                  {selectedMapJob ? (
-                     <LeafletMap lat={selectedMapJob.finalLat} lon={selectedMapJob.finalLon} kmlData={selectedMapJob.kmlData} />
+                  {workOrders.filter(w => w.finalLat || w.kmlData).length > 0 ? (
+                     <LeafletMap jobs={workOrders.filter(w => w.finalLat || w.kmlData)} selectedJob={selectedMapJob} />
                   ) : (
-                     <div className="flex h-full items-center justify-center text-slate-600 border border-slate-800 rounded-[2.5rem]"><div className="text-center px-4"><MapPin size={48} className="mx-auto mb-4 opacity-50"/><p className="text-[11px] font-black uppercase tracking-widest">Select a job to view map</p></div></div>
+                     <div className="flex h-full items-center justify-center text-slate-600 border border-slate-800 rounded-[2.5rem]"><div className="text-center px-4"><MapPin size={48} className="mx-auto mb-4 opacity-50"/><p className="text-[11px] font-black uppercase tracking-widest">No jobs with geodata available</p></div></div>
                   )}
                 </div>
              </div>
@@ -868,7 +978,7 @@
       );
     };
 
-    const MissionLogTab = ({ logs, fleet, customers, products, crops, isEditing, state, setState, onCancel, onSubmit, onDelete, kmlRef, handleKml, notify }) => {
+    const MissionLogTab = ({ logs, notams, fleet, customers, products, crops, isEditing, state, setState, onCancel, onSubmit, onDelete, kmlRef, handleKml, notify }) => {
       const [inlineCustomer, setInlineCustomer] = useState(false);
       const [newCustData, setNewCustData] = useState(defaultCustomerState);
       const [inlineProduct, setInlineProduct] = useState(false);
@@ -904,7 +1014,7 @@
              const t = data.hourly.temperature_2m[hour];
              const h = data.hourly.relative_humidity_2m[hour];
              const ws = data.hourly.wind_speed_10m[hour];
-             let wd = data.hourly.wind_direction_10m[hour]; // Changed to let so it can be reassigned
+             let wd = data.hourly.wind_direction_10m[hour];
 
              if (t === null || t === undefined) throw new Error("Not available for this specific hour yet");
 
@@ -1104,9 +1214,11 @@
                    <Input label="Humidity" type="number" step="any" value={state.humidity} onChange={e => setState({...state, humidity: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">%</span>} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <div className="space-y-2 min-w-0"><label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 block truncate">Boundary (KML)</label><div className="flex flex-col sm:flex-row gap-2 min-w-0"><button type="button" onClick={() => kmlRef.current?.click()} className={`flex-1 p-4 rounded-2xl text-xs font-black uppercase border truncate transition-colors min-w-0 ${state.kmlFileName ? 'bg-[#9cd33b]/10 border-[#9cd33b]/50 text-[#9cd33b]' : 'bg-slate-950 border-slate-800 text-slate-400'}`}>{state.kmlFileName || 'Attach KML'}</button>{state.kmlFileName && <Button variant="danger" className="shrink-0" onClick={() => { setState({...state, kmlData: null, kmlFileName: ''}); if(kmlRef.current) kmlRef.current.value=""; }}><X size={16}/></Button>}<input type="file" accept=".kml" ref={kmlRef} className="hidden" onChange={handleKml}/></div></div>
-                   
                    <div className="space-y-4">
+                      <Select label="Attached NOTAM" value={state.attachedNotam || ''} onChange={e => setState({...state, attachedNotam: e.target.value})}>
+                         <option className="bg-slate-900" value="">None</option>
+                         {(notams || []).map(n => <option className="bg-slate-900" key={n.id} value={n.notamNumber}>{String(n.notamNumber)} ({String(n.date)})</option>)}
+                      </Select>
                       <Select label="FAA Incidents" value={state.incidents} onChange={e => setState({...state, incidents: e.target.value})}>
                          <option className="bg-slate-900" value="None">None</option>
                          <option className="bg-slate-900" value="Damage">Damage</option>
@@ -1115,6 +1227,7 @@
                          <TextArea label="Describe Damage / Incident" value={state.damageDescription} onChange={e => setState({...state, damageDescription: e.target.value})} required/>
                       )}
                    </div>
+                   <div className="space-y-2 min-w-0"><label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 block truncate">Boundary (KML)</label><div className="flex flex-col sm:flex-row gap-2 min-w-0"><button type="button" onClick={() => kmlRef.current?.click()} className={`flex-1 p-4 rounded-2xl text-xs font-black uppercase border truncate transition-colors min-w-0 ${state.kmlFileName ? 'bg-[#9cd33b]/10 border-[#9cd33b]/50 text-[#9cd33b]' : 'bg-slate-950 border-slate-800 text-slate-400'}`}>{state.kmlFileName || 'Attach KML'}</button>{state.kmlFileName && <Button variant="danger" className="shrink-0" onClick={() => { setState({...state, kmlData: null, kmlFileName: ''}); if(kmlRef.current) kmlRef.current.value=""; }}><X size={16}/></Button>}<input type="file" accept=".kml" ref={kmlRef} className="hidden" onChange={handleKml}/></div></div>
                 </div>
               </div>
             </div>
@@ -1126,14 +1239,33 @@
           <table className="w-full text-left min-w-[700px]"><thead className="bg-slate-800/60 text-slate-400 uppercase text-[9px] font-black tracking-widest border-b border-slate-800"><tr><th className="p-6">Date / Times</th><th className="p-6">Fleet / Client</th><th className="p-6">Product / Location</th><th className="p-6 text-right">Audit</th></tr></thead><tbody className="divide-y divide-slate-800/40">
             {logs.length === 0 && <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No flights logged.</td></tr>}
             {logs.map(log => (
-              <tr key={log.id} className="hover:bg-slate-800/40"><td className="p-6 min-w-[120px]"><p className="font-black text-slate-100 text-xs break-words">{String(log.date)}</p><p className="text-[10px] text-slate-400 font-mono mt-1 uppercase break-words">{String(log.startTime)} - {String(log.endTime)}</p></td><td className="p-6 min-w-[150px]"><div className="flex flex-wrap gap-1 mb-2">{log.selectedAircraft?.map((acID, i) => <span key={i} className="text-[9px] font-black text-[#9cd33b] bg-slate-950 px-2 py-0.5 rounded-full border border-slate-800 break-words">{String(acID)}</span>)}</div><p className="text-[10px] text-slate-300 font-black uppercase tracking-tight break-words">{String(log.customer)}</p></td><td className="p-6 min-w-[150px]"><p className="font-black text-[#9cd33b] uppercase text-xs break-words">{String(log.chemical)}</p><p className="text-[10px] text-slate-400 uppercase font-bold break-words">{String(log.locationName)} | {String(log.treatedAcreage)} AC</p></td><td className="p-6 text-right flex justify-end gap-3 items-center whitespace-nowrap"><div className="inline-flex items-center gap-2 text-[9px] font-black text-[#9cd33b] border border-[#9cd33b]/30 bg-[#9cd33b]/10 px-3 py-1 rounded-full uppercase tracking-widest"><ShieldCheck size={12} /> Verified</div><button onClick={() => setState({...log, isEditing: true})} className="text-blue-500"><Edit3 size={16}/></button><button onClick={() => onDelete('flight_logs', log.id)} className="text-red-500"><Trash2 size={16}/></button></td></tr>
+              <tr key={log.id} className="hover:bg-slate-800/40">
+                 <td className="p-6 min-w-[150px]">
+                    <p className="font-black text-slate-100 text-xs break-words">{String(log.date)}</p>
+                    <p className="text-[10px] text-slate-400 font-mono mt-1 uppercase break-words">{String(log.startTime)} - {String(log.endTime)}</p>
+                    {log.attachedNotam && <span className="inline-block mt-2 text-[8px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-black uppercase">NOTAM: {log.attachedNotam}</span>}
+                 </td>
+                 <td className="p-6 min-w-[150px]">
+                    <div className="flex flex-wrap gap-1 mb-2">{log.selectedAircraft?.map((acID, i) => <span key={i} className="text-[9px] font-black text-[#9cd33b] bg-slate-950 px-2 py-0.5 rounded-full border border-slate-800 break-words">{String(acID)}</span>)}</div>
+                    <p className="text-[10px] text-slate-300 font-black uppercase tracking-tight break-words">{String(log.customer)}</p>
+                 </td>
+                 <td className="p-6 min-w-[150px]">
+                    <p className="font-black text-[#9cd33b] uppercase text-xs break-words">{String(log.chemical)}</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold break-words">{String(log.locationName)} | {String(log.treatedAcreage)} AC</p>
+                 </td>
+                 <td className="p-6 text-right flex justify-end gap-3 items-center whitespace-nowrap">
+                    <div className="inline-flex items-center gap-2 text-[9px] font-black text-[#9cd33b] border border-[#9cd33b]/30 bg-[#9cd33b]/10 px-3 py-1 rounded-full uppercase tracking-widest"><ShieldCheck size={12} /> Verified</div>
+                    <button onClick={() => setState({...log, isEditing: true})} className="text-blue-500 mr-4"><Edit3 size={16}/></button>
+                    <button onClick={() => onDelete('flight_logs', log.id)} className="text-red-500"><Trash2 size={16}/></button>
+                 </td>
+              </tr>
             ))}
           </tbody></table>
         </TableCard>
       );
     };
 
-    const NotamTab = ({ notams, isEditing, state, setState, onCancel, onSubmit, onDelete, derived, generate, notify, company, certs }) => {
+    const NotamTab = ({ notams, isEditing, state, setState, onCancel, onSubmit, onDelete, derived, generate, notify, company }) => {
       if (isEditing) {
         return (
           <div className="space-y-6 animate-fade-in min-w-0">
@@ -1199,9 +1331,21 @@
       );
     };
 
-    const FaaReportTab = ({ company, fleet, certs, monthlyReport, reportMonth, setReportMonth, showFormalReport, setShowFormalReport, user, notify, faaReports, onDelete }) => {
+    const FaaReportTab = ({ company, fleet, certs, monthlyReport, reportMonth, setReportMonth, showFormalReport, setShowFormalReport, notify, faaReports, onDelete }) => {
       const handlePrint = () => {
-        window.print();
+        const element = document.getElementById('faa-report-content');
+        if (window.html2pdf && element) {
+           const opt = {
+             margin:       0.5,
+             filename:     `FAA_Report_${company.name}_${reportMonth}.pdf`,
+             image:        { type: 'jpeg', quality: 0.98 },
+             html2canvas:  { scale: 2, useCORS: true },
+             jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+           };
+           window.html2pdf().set(opt).from(element).save();
+        } else {
+           window.print();
+        }
       };
 
       const getDaysInMonth = (yyyyMonth) => {
@@ -1227,10 +1371,7 @@
       const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${emailAddress}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
 
       const handleEmailClick = (e) => {
-        try {
-           copyToClipboard(emailAddress);
-           notify("Address copied to clipboard just in case!", "success");
-        } catch (err) {}
+        try { copyToClipboard(emailAddress); notify("Address copied to clipboard just in case!", "success"); } catch (err) {}
       };
 
       return (
@@ -1241,34 +1382,34 @@
            </Card>
 
            {showFormalReport ? (
-             <div className="bg-white text-black p-8 md:p-12 rounded-[2rem] shadow-2xl space-y-8 font-sans overflow-x-auto print:p-0 print:shadow-none print:border-none print:w-full print:m-0">
+             <div id="faa-report-content" className="bg-white text-black p-8 md:p-12 rounded-[2rem] shadow-2xl space-y-8 font-sans overflow-x-auto print:p-0 print:shadow-none print:border-none print:w-full print:m-0">
                 
-                <div className="flex flex-col sm:flex-row justify-end items-center gap-4 print:hidden mb-8 border-b border-slate-200 pb-8">
-                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mr-auto hidden sm:block">Step 1: Save as PDF. Step 2: Send & Attach.</span>
+                <div data-html2canvas-ignore="true" className="flex flex-col sm:flex-row justify-end items-center gap-4 print:hidden mb-8 border-b border-slate-200 pb-8">
+                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mr-auto hidden sm:block mt-2">Step 1: Save as PDF. Step 2: Send & Attach.</span>
                    <Button onClick={handlePrint} className="bg-slate-800 text-white hover:bg-slate-700 py-4"><Printer size={16}/> Save as PDF</Button>
                    <a href={gmailLink} target="_blank" rel="noopener noreferrer" onClick={handleEmailClick} className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-red-600 text-white hover:bg-red-700 active:scale-[0.98]"><Navigation size={16}/> Send via Gmail</a>
                 </div>
 
                 <div className="text-center md:text-left border-b-2 border-black pb-6">
                    <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-tight text-black">FAA Monthly Report</h1>
-                   <p className="text-lg font-medium text-black mt-1">{getDaysInMonth(reportMonth)}</p>
+                   <p className="text-lg font-medium text-black mt-1">Period: {reportMonth} ({getDaysInMonth(reportMonth)})</p>
                 </div>
 
                 <section className="space-y-4">
-               <h2 className="text-xl font-bold text-black border-b border-gray-300 pb-1">Certificate Information</h2>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                  <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Company Name</span><span>{company.name || 'N/A'}</span></div>
-                  <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Chief Supervisor</span><span>{company.supervisor || 'N/A'}</span></div>
-                  <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Chief Supervisor Email</span><span className="break-all">{company.email || 'N/A'}</span></div>
-                  <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Pilot in Command</span><span>{company.supervisor || 'N/A'}</span></div>
-                  <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Pilot in Command Email</span><span className="break-all">{company.email || 'N/A'}</span></div>
-                  <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Operator's Cert (Part 137/107)</span><span>{part137No}</span></div>
-                  <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Operator's State Certificate Number</span><span>{stateCertNo}</span></div>
-                  <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">44807 Exemption Number</span><span>{exemptionNo}</span></div>
-               </div>
-            </section>
+                   <h2 className="text-xl font-bold text-black border-b border-gray-300 pb-1">Certificate Information</h2>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Company Name</span><span>{company.name || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Chief Supervisor</span><span>{company.supervisor || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Chief Supervisor Email</span><span className="break-all">{company.email || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Pilot in Command</span><span>{company.supervisor || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Pilot in Command Email</span><span className="break-all">{company.email || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Operator's Cert (Part 137/107)</span><span>{part137No}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Operator's State Certificate Number</span><span>{stateCertNo}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">44807 Exemption Number</span><span>{exemptionNo}</span></div>
+                   </div>
+                </section>
 
-            <section className="space-y-4 pt-4">
+                <section className="space-y-4 pt-4">
                    <h2 className="text-xl font-bold text-black border-b border-gray-300 pb-1">Pilot Information</h2>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
                       <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Pilot Name</span><span>{company.supervisor || 'N/A'}</span></div>
@@ -1466,17 +1607,18 @@
 
       useEffect(() => {
         if (!user) return;
-        const qLogs = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'flight_logs'), s => setAllLogs(s.docs.map(d => ({id: d.id, ...d.data()}))));
-        const qWO = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'work_orders'), s => setAllWorkOrders(s.docs.map(d => ({id: d.id, ...d.data()}))));
-        const qCerts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'certifications'), s => setAllCerts(s.docs.map(d => ({id: d.id, ...d.data()}))));
-        const qMaint = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'maintenance_records'), s => setAllMaintRecords(s.docs.map(d => ({id: d.id, ...d.data()}))));
-        const qCust = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), s => setAllCustomers(s.docs.map(d => ({id: d.id, ...d.data()}))));
-        const qProd = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), s => setAllProducts(s.docs.map(d => ({id: d.id, ...d.data()}))));
-        const qNotam = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'notam_logs'), s => setAllNotams(s.docs.map(d => ({id: d.id, ...d.data()}))));
-        const qCrops = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'crops'), s => setAllCrops(s.docs.map(d => ({id: d.id, ...d.data()}))));
-        const qFaaReports = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'faa_reports'), s => setAllFaaReports(s.docs.map(d => ({id: d.id, ...d.data()}))));
+        const sub = (colName, setFn) => onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', colName), s => setFn(s.docs.map(d => ({id: d.id, ...d.data()}))));
+        const qL = sub('flight_logs', setAllLogs);
+        const qW = sub('work_orders', setAllWorkOrders);
+        const qC = sub('certifications', setAllCerts);
+        const qM = sub('maintenance_records', setAllMaintRecords);
+        const qCust = sub('customers', setAllCustomers);
+        const qP = sub('products', setAllProducts);
+        const qN = sub('notam_logs', setAllNotams);
+        const qCrops = sub('crops', setAllCrops);
+        const qFaa = sub('faa_reports', setAllFaaReports);
         setLoading(false);
-        return () => { qLogs(); qWO(); qCerts(); qMaint(); qCust(); qProd(); qNotam(); qCrops(); qFaaReports(); };
+        return () => { qL(); qW(); qC(); qM(); qCust(); qP(); qN(); qCrops(); qFaa(); };
       }, [user]);
 
       useEffect(() => {
@@ -1497,6 +1639,12 @@
       const crops = useMemo(() => allCrops.filter(c => c.companyName?.toLowerCase() === customUser?.companyName.toLowerCase()).sort((a,b)=>a.name.localeCompare(b.name)), [allCrops, customUser]);
       const faaReports = useMemo(() => allFaaReports.filter(r => r.companyName?.toLowerCase() === customUser?.companyName.toLowerCase()).sort((a,b)=>b.month.localeCompare(a.month)), [allFaaReports, customUser]);
 
+      const faaReportData = useMemo(() => {
+        const currentLogs = logs.filter(l => l.date && l.date.startsWith(reportMonth));
+        const tHours = (currentLogs.reduce((a, l) => a + (parseFloat(l.flightTimeMinutes)||0), 0) / 60).toFixed(2);
+        return { logs: currentLogs, totalHours: tHours, flightCount: currentLogs.length };
+      }, [logs, reportMonth]);
+
       const genericSubmit = async (e, col, stateObj, setFn, defaultState, msg) => {
         e.preventDefault(); if (!customUser) return;
         const finalData = { ...stateObj, companyName: customUser.companyName, timestamp: stateObj.timestamp || new Date().toISOString() };
@@ -1508,79 +1656,41 @@
         } catch (err) { notify("Error saving.", "error"); }
       };
 
-      const deleteItem = (col, id) => {
-        setDeleteConfirm({ col, id });
-      };
+      const deleteItem = (col, id) => { setDeleteConfirm({ col, id }); };
 
       const executeDelete = async () => {
         if (!deleteConfirm) return;
         try {
           await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', deleteConfirm.col, deleteConfirm.id));
           notify("Record Deleted", "info");
-        } catch (err) {
-          notify("Error deleting record.", "error");
-        }
+        } catch (err) { notify("Error deleting record.", "error"); }
         setDeleteConfirm(null);
       };
 
       const handleLogin = async (e) => {
          e.preventDefault();
          let currentUser = user;
-         
          if (!currentUser) {
-            if (firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "mock") {
-               return notify("Deployment Error: Missing Firebase Keys in the code!", "error");
-            }
-            try {
-               const cred = await signInAnonymously(auth);
-               currentUser = cred.user;
-               setUser(cred.user);
-            } catch(err) {
-               if (err.code === 'auth/operation-not-allowed') return notify("Firebase Error: Enable 'Anonymous' Sign-In in Firebase Auth!", "error");
-               return notify(`Connection Blocked: ${err.message}`, "error");
-            }
+            try { const cred = await signInAnonymously(auth); currentUser = cred.user; setUser(cred.user); } 
+            catch(err) { return notify(`Connection Blocked: ${err.message}`, "error"); }
          }
-         
          const cName = authForm.companyName?.trim().toLowerCase();
          const uName = authForm.username?.trim().toLowerCase();
-         
          try {
             const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
-            
-            const found = snap.docs.map(d => ({id: d.id, ...d.data()})).find(u => {
-               return u.companyName?.toLowerCase() === cName && u.username?.toLowerCase() === uName && u.password === authForm.password;
-            });
-            
-            if (found) { 
-              setCustomUser(found); 
-              setActiveTab(found.role === 'Dispatcher' ? 'schedule' : 'dashboard'); 
-              notify("Welcome back", 'success'); 
-            } else {
-              notify("Invalid credentials.", "error");
-            }
-         } catch(err) {
-            notify(`Database Error: ${err.message}`, "error");
-         }
+            const found = snap.docs.map(d => ({id: d.id, ...d.data()})).find(u => u.companyName?.toLowerCase() === cName && u.username?.toLowerCase() === uName && u.password === authForm.password);
+            if (found) { setCustomUser(found); setActiveTab(found.role === 'Dispatcher' ? 'schedule' : 'dashboard'); notify("Welcome back", 'success'); } 
+            else notify("Invalid credentials.", "error");
+         } catch(err) { notify(`Database Error: ${err.message}`, "error"); }
       };
 
       const handleRegister = async (e) => {
          e.preventDefault();
          let currentUser = user;
-         
          if (!currentUser) {
-            if (firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "mock") {
-               return notify("Deployment Error: Missing Firebase Keys in the code!", "error");
-            }
-            try {
-               const cred = await signInAnonymously(auth);
-               currentUser = cred.user;
-               setUser(cred.user);
-            } catch(err) {
-               if (err.code === 'auth/operation-not-allowed') return notify("Firebase Error: Enable 'Anonymous' Sign-In in Firebase Auth!", "error");
-               return notify(`Connection Blocked: ${err.message}`, "error");
-            }
+            try { const cred = await signInAnonymously(auth); currentUser = cred.user; setUser(cred.user); } 
+            catch(err) { return notify(`Connection Blocked: ${err.message}`, "error"); }
          }
-         
          try {
             const cName = authForm.companyName?.trim();
             const uName = authForm.username?.trim();
@@ -1596,12 +1706,8 @@
                const cDocSnap = await getDoc(cDoc);
                if (!cDocSnap.exists()) await setDoc(cDoc, { name: cName, supervisor: uName, email: '', phone: '', address: '', certNo: '', exemption: '12345', timezone: -6, fleet: [] });
             }
-            setCustomUser({ id: docRef.id, ...newUser }); 
-            setActiveTab(newUser.role === 'Dispatcher' ? 'schedule' : 'dashboard'); 
-            notify("User created.", "success");
-         } catch (err) {
-            notify(`Database Error: ${err.message}`, "error");
-         }
+            setCustomUser({ id: docRef.id, ...newUser }); setActiveTab(newUser.role === 'Dispatcher' ? 'schedule' : 'dashboard'); notify("User created.", "success");
+         } catch (err) { notify(`Database Error: ${err.message}`, "error"); }
       };
 
       const handleForgotPassword = async (e) => {
@@ -1609,71 +1715,207 @@
          const cName = authForm.companyName?.trim().toLowerCase();
          const uName = authForm.username?.trim().toLowerCase();
          const email = authForm.email?.trim().toLowerCase();
-
          try {
             const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
-            const userDoc = snap.docs.find(d => {
-                const data = d.data();
-                return data.companyName?.toLowerCase() === cName && 
-                       data.username?.toLowerCase() === uName && 
-                       data.email && data.email.toLowerCase() === email;
-            });
-
-            if (userDoc) {
-                setResetUserDoc({ id: userDoc.id, ...userDoc.data() });
-                setAuthMode('reset');
-                notify("Account verified. Please set a new password.", "success");
-            } else {
-                notify("No matching account found with those exact details.", "error");
-            }
-         } catch (err) {
-            notify(`Error: ${err.message}`, "error");
-         }
+            const userDoc = snap.docs.find(d => { const data = d.data(); return data.companyName?.toLowerCase() === cName && data.username?.toLowerCase() === uName && data.email && data.email.toLowerCase() === email; });
+            if (userDoc) { setResetUserDoc({ id: userDoc.id, ...userDoc.data() }); setAuthMode('reset'); notify("Account verified. Please set a new password.", "success"); } 
+            else notify("No matching account found with those exact details.", "error");
+         } catch (err) { notify(`Error: ${err.message}`, "error"); }
       };
 
       const handleResetPassword = async (e) => {
          e.preventDefault();
          if (!resetUserDoc || !authForm.password) return;
          try {
-             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_users', resetUserDoc.id), {
-                 password: authForm.password
-             });
-             notify("Password updated successfully! You can now log in.", "success");
-             setAuthMode('login');
-             setAuthForm({...authForm, password: ''});
-             setResetUserDoc(null);
-         } catch (err) {
-             notify(`Error updating password: ${err.message}`, "error");
-         }
+             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_users', resetUserDoc.id), { password: authForm.password });
+             notify("Password updated successfully! You can now log in.", "success"); setAuthMode('login'); setAuthForm({...authForm, password: ''}); setResetUserDoc(null);
+         } catch (err) { notify(`Error updating password: ${err.message}`, "error"); }
       };
 
-      const handleChangePassword = async () => {
-         if (oldPassword !== customUser.password) {
-             return notify("Current password is incorrect.", "error");
-         }
-         try {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_users', customUser.id), { password: newPassword });
-            notify("Password changed successfully!", "success");
-            setCustomUser({...customUser, password: newPassword});
-            setOldPassword('');
-            setNewPassword('');
-            setShowProfileModal(false);
-         } catch(err) {
-            notify("Error changing password", "error");
-         }
+      const handleScheduleSubmit = async (e, newCustData, newProdData) => { 
+        e.preventDefault(); 
+        let c = workOrderState.customer;
+        if (newCustData && newCustData.name) { 
+          c = newCustData.name; 
+          try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), { ...newCustData, companyName: customUser.companyName, timestamp: new Date().toISOString() }); } catch(err) {}
+        }
+
+        let p = workOrderState.chemical;
+        if (newProdData && newProdData.name) {
+          p = newProdData.name;
+          try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), { ...newProdData, companyName: customUser.companyName, timestamp: new Date().toISOString() }); } catch(err) {}
+        }
+
+        let lat = 0, lon = 0;
+        if (workOrderState.coordType === 'Decimal') { 
+           lat = Math.abs(parseFloat(workOrderState.latDec||0)) * (workOrderState.latDecDir==='S'?-1:1); 
+           lon = Math.abs(parseFloat(workOrderState.lonDec||0)) * (workOrderState.lonDecDir==='E'?1:-1); 
+        } else if (workOrderState.coordType === 'DMS') { 
+           lat=(parseFloat(workOrderState.latDMS.d||0)+parseFloat(workOrderState.latDMS.m||0)/60+parseFloat(workOrderState.latDMS.s||0)/3600)*(workOrderState.latDMS.dir==='S'?-1:1); 
+           lon=(parseFloat(workOrderState.lonDMS.d||0)+parseFloat(workOrderState.lonDMS.m||0)/60+parseFloat(workOrderState.lonDMS.s||0)/3600)*(workOrderState.lonDMS.dir==='W'?-1:1); 
+        }
+        
+        const finalData = {
+           ...workOrderState, 
+           customer: c, 
+           chemical: p,
+           finalLat: lat, 
+           finalLon: lon, 
+           isScheduled: !!workOrderState.date, 
+           companyName: customUser.companyName, 
+           creator: workOrderState.id ? workOrderState.creator : customUser.username
+        }; 
+        delete finalData.isEditing;
+        
+        if (workOrderState.id) {
+           await updateDoc(doc(db,'artifacts',appId,'public','data', 'work_orders', workOrderState.id), finalData); 
+        } else {
+           await addDoc(collection(db,'artifacts',appId,'public','data','work_orders'), finalData);
+        }
+        
+        if (workOrderState.status === 'Completed') {
+           setLogState({
+              ...defaultLogState,
+              isEditing: true,
+              customer: c,
+              locationName: workOrderState.title || '',
+              totalAcreage: workOrderState.acres || '',
+              treatedAcreage: workOrderState.acres || '',
+              date: workOrderState.date || new Date().toLocaleDateString('en-CA'),
+              coordType: workOrderState.coordType || 'Decimal',
+              latDec: workOrderState.latDec || '',
+              lonDec: workOrderState.lonDec || '',
+              latDecDir: workOrderState.latDecDir || 'N',
+              lonDecDir: workOrderState.lonDecDir || 'W',
+              latDMS: workOrderState.latDMS || { d: '', m: '', s: '', dir: 'N' },
+              lonDMS: workOrderState.lonDMS || { d: '', m: '', s: '', dir: 'W' },
+              kmlData: workOrderState.kmlData || null,
+              kmlFileName: workOrderState.kmlFileName || '',
+              chemical: p || ''
+           });
+           setWorkOrderState({...defaultWorkOrderState, isEditing: false});
+           setActiveTab('log');
+           notify("Order Completed. Pre-filling Mission Log.", "success");
+        } else {
+           setWorkOrderState({...defaultWorkOrderState, isEditing: false}); 
+           notify("Order Saved", "success");
+        }
       };
 
-      if (loading) return <div className="flex h-screen items-center justify-center bg-slate-950 text-[#9cd33b] font-black uppercase tracking-widest"><GlobalStyles/>Initializing...</div>;
+      const handleLogMissionFromSchedule = (job) => {
+         setLogState({
+             ...defaultLogState,
+             isEditing: true,
+             customer: job.customer || '',
+             locationName: job.title || '',
+             totalAcreage: job.acres || '',
+             treatedAcreage: job.acres || '',
+             date: job.date || new Date().toLocaleDateString('en-CA'),
+             coordType: job.coordType || 'Decimal',
+             latDec: job.latDec || '',
+             lonDec: job.lonDec || '',
+             latDecDir: job.latDecDir || 'N',
+             lonDecDir: job.lonDecDir || 'W',
+             latDMS: job.latDMS || { d: '', m: '', s: '', dir: 'N' },
+             lonDMS: job.lonDMS || { d: '', m: '', s: '', dir: 'W' },
+             kmlData: job.kmlData || null,
+             kmlFileName: job.kmlFileName || '',
+             chemical: job.chemical || ''
+         });
+         setActiveTab('log');
+         notify("Pre-filled Mission Log from Work Order", "info");
+      };
+
+      const handleScheduleDrop = async (e, d) => { 
+        const id=e.dataTransfer.getData('text/plain'); 
+        if(!id) return; 
+        await updateDoc(doc(db,'artifacts',appId,'public','data','work_orders',id),{date:d.toLocaleDateString('en-CA'),isScheduled:true,status:'Pending'}); 
+        notify("Scheduled", "success"); 
+      };
+
+      const handleLogSubmit = async (e, newCustData, newProdData) => {
+        e.preventDefault();
+        let c = logState.customer;
+        if (newCustData && newCustData.name) {
+           c = newCustData.name;
+           try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), { ...newCustData, companyName: customUser.companyName, timestamp: new Date().toISOString() }); } catch(err) {}
+        }
+        let p = logState.chemical;
+        if (newProdData && newProdData.name) {
+           p = newProdData.name;
+           try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), { ...newProdData, companyName: customUser.companyName, timestamp: new Date().toISOString() }); } catch(err) {}
+        }
+        let finalCrop = logState.whatWasTreated;
+        if (logState.whatWasTreated === 'ADD_NEW') {
+           finalCrop = logState.customCrop;
+           try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'crops'), { name: finalCrop, companyName: customUser.companyName, timestamp: new Date().toISOString() }); } catch(err) {}
+        }
+        
+        let totalUsed = (parseFloat(logState.appRate) || 0) * (parseFloat(logState.treatedAcreage) || parseFloat(logState.totalAcreage) || 0);
+        if (p && totalUsed > 0) {
+           const prodDoc = products.find(prod => prod.name === p);
+           if (prodDoc && prodDoc.id) {
+               const currentInv = parseFloat(prodDoc.inventory) || 0;
+               const newInv = Math.max(0, currentInv - totalUsed);
+               updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prodDoc.id), { inventory: newInv.toFixed(2) }).catch(()=>{});
+           }
+        }
+
+        let mins = parseFloat(logState.flightTimeValue) || 0;
+        if (logState.flightTimeUnit === 'Hours') mins = mins * 60;
+        
+        let lat = 0, lon = 0;
+        if(logState.coordType === 'Decimal') { 
+          lat = Math.abs(parseFloat(logState.latDec||0)) * (logState.latDecDir==='S'?-1:1); 
+          lon = Math.abs(parseFloat(logState.lonDec||0)) * (logState.lonDecDir==='E'?1:-1); 
+        } else if(logState.coordType === 'DMS') { 
+          lat = (parseFloat(logState.latDMS.d||0)+parseFloat(logState.latDMS.m||0)/60+parseFloat(logState.latDMS.s||0)/3600)*(logState.latDMS.dir==='S'?-1:1); 
+          lon = (parseFloat(logState.lonDMS.d||0)+parseFloat(logState.lonDMS.m||0)/60+parseFloat(logState.lonDMS.s||0)/3600)*(logState.lonDMS.dir==='W'?-1:1); 
+        }
+        let finalCoords = logState.coordType === 'Decimal' ? `${lat}, ${lon}` : `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        
+        const finalState = { ...logState, picUsername: customUser.username, flightTimeMinutes: mins, coordinates: finalCoords, finalLat: lat, finalLon: lon, whatWasTreated: finalCrop, customer: c, chemical: p };
+        genericSubmit(e, 'flight_logs', finalState, setLogState, defaultLogState, "Mission Logged");
+      };
+
+      const generateNotamScript = () => {
+          let formattedLat = "000000"; let formattedLon = "000000"; let latDir = "N"; let lonDir = "W";
+          if (notamState.coordType === 'Decimal') {
+             formattedLat = formatToNotamDMS(Math.abs(parseFloat(notamState.latDec) || 0), false);
+             formattedLon = formatToNotamDMS(Math.abs(parseFloat(notamState.lonDec) || 0), true);
+             latDir = notamState.latDecDir || 'N'; lonDir = notamState.lonDecDir || 'W';
+          } else {
+             formattedLat = `${String(notamState.latDMS.d || 0).padStart(2, '0')}${String(notamState.latDMS.m || 0).padStart(2, '0')}${String(notamState.latDMS.s || 0).padStart(2, '0')}`;
+             formattedLon = `${String(notamState.lonDMS.d || 0).padStart(3, '0')}${String(notamState.lonDMS.m || 0).padStart(2, '0')}${String(notamState.lonDMS.s || 0).padStart(2, '0')}`;
+             latDir = notamState.latDMS.dir; lonDir = notamState.lonDMS.dir;
+          }
+          const exemptionCert = certs?.find(c => c.name === 'FAA 44807');
+          const exemptionNo = exemptionCert ? exemptionCert.licenseNumber : 'TBD';
+          return `!FDC UAS ... ${company.name?.toUpperCase() || 'ORG'}. ${notamState.date} AIRSPACE UAS WI AN AREA DEFINED AS ${notamState.radius}NM RADIUS OF ${formattedLat}${latDir}${formattedLon}${lonDir} SFC-200FT AGL. PURSUANT TO EXEMPTION ${exemptionNo}.`;
+      };
+
+      const handleNotamSubmit = (e) => {
+          e.preventDefault();
+          let lat = 0, lon = 0;
+          if(notamState.coordType === 'Decimal') { 
+            lat = Math.abs(parseFloat(notamState.latDec||0)) * (notamState.latDecDir==='S'?-1:1); 
+            lon = Math.abs(parseFloat(notamState.lonDec||0)) * (notamState.lonDecDir==='E'?1:-1); 
+          } else if(notamState.coordType === 'DMS') { 
+            lat = (parseFloat(notamState.latDMS.d||0)+parseFloat(notamState.latDMS.m||0)/60+parseFloat(notamState.latDMS.s||0)/3600)*(notamState.latDMS.dir==='S'?-1:1); 
+            lon = (parseFloat(notamState.lonDMS.d||0)+parseFloat(notamState.lonDMS.m||0)/60+parseFloat(notamState.lonDMS.s||0)/3600)*(notamState.lonDMS.dir==='W'?-1:1); 
+          }
+          const finalState = { ...notamState, picUsername: customUser.username, finalLat: lat, finalLon: lon };
+          genericSubmit(e, 'notam_logs', finalState, setNotamState, defaultNotamState, "NOTAM Archived");
+      };
+
+      if (loading) return <div className="flex h-screen items-center justify-center bg-[#020617] text-[#9cd33b] font-black uppercase tracking-widest"><GlobalStylesComp/>Initializing...</div>;
 
       if (!customUser) {
         return (
-          <div className="flex h-screen items-center justify-center p-6 bg-[#020617] relative overflow-hidden">
-            {/* Ambient Background Glows */}
-            <div className="absolute top-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-[#9cd33b]/10 blur-[120px] rounded-full pointer-events-none"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-[40rem] h-[40rem] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none"></div>
-            
-            <GlobalStyles /><Toast notification={notification} />
-            <Card className="w-full max-w-md space-y-8 animate-fade-in border-[#9cd33b]/30 shadow-[0_0_50px_rgba(156,211,59,0.1)] relative z-10 backdrop-blur-2xl bg-slate-900/80">
+          <div className="flex min-h-screen items-center justify-center p-6 bg-[#020617] relative overflow-y-auto">
+            <div className="bg-lightning-container"><div className="lightning-veins"></div></div>
+            <GlobalStylesComp /><Toast notification={notification} />
+            <Card className="w-full max-w-md space-y-8 animate-fade-in border-[#9cd33b]/30 shadow-[0_0_50px_rgba(156,211,59,0.1)] relative z-10 backdrop-blur-2xl bg-slate-900/80 my-8">
                <div className="text-center flex flex-col items-center">
                   <div className="w-24 h-24 bg-gradient-to-br from-[#9cd33b]/20 to-transparent rounded-full flex items-center justify-center mb-6 border border-[#9cd33b]/40 shadow-[0_0_40px_rgba(156,211,59,0.2)]"><Lock className="text-[#9cd33b]" size={36} strokeWidth={2.5} /></div>
                   <h1 className="text-5xl font-['Orbitron'] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-white to-[#9cd33b] drop-shadow-[0_0_15px_rgba(156,211,59,0.4)] mb-1">Spray Ops</h1>
@@ -1697,7 +1939,7 @@
                       value={authForm.password} 
                       onChange={e => setAuthForm({...authForm, password: e.target.value})} 
                       required 
-                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none pointer-events-auto">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
                     />
                     <Button type="submit" className="w-full py-4 mt-8">Login <ArrowRight size={16}/></Button>
                  </form>
@@ -1714,7 +1956,7 @@
                       value={authForm.password} 
                       onChange={e => setAuthForm({...authForm, password: e.target.value})} 
                       required 
-                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none pointer-events-auto">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
                     />
                     <Select label="Role" value={authForm.role} onChange={e => setAuthForm({...authForm, role: e.target.value})}><option value="Pilot">Pilot</option><option value="Manager">Manager</option><option value="Dispatcher">Dispatcher</option></Select>
                     <Button type="submit" className="w-full py-4 mt-8">Create Key <ArrowRight size={16}/></Button>
@@ -1742,7 +1984,7 @@
                       value={authForm.password} 
                       onChange={e => setAuthForm({...authForm, password: e.target.value})} 
                       required 
-                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                      rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none pointer-events-auto">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
                     />
                     <Button type="submit" className="w-full py-4 mt-8">Update Password <ArrowRight size={16}/></Button>
                  </form>
@@ -1751,7 +1993,7 @@
                {authMode === 'login' && (
                  <div className="flex flex-col gap-4 text-center pt-8 border-t border-slate-800 mt-8">
                     <button type="button" onClick={() => setAuthMode('forgot')} className="text-[10px] text-blue-400 hover:text-blue-300 uppercase font-black tracking-widest transition-colors">Forgot Password?</button>
-                    <button type="button" onClick={() => setAuthMode('register')} className="text-[10px] text-slate-400 hover:text-slate-200 uppercase font-black tracking-widest transition-colors">Need an account? Register Here</button>
+                    <button type="button" onClick={() => setAuthMode('register')} className="text-[10px] text-slate-400 hover:text-slate-200 uppercase font-black tracking-widest transition-colors">Need Account? Register New User</button>
                  </div>
                )}
                {(authMode === 'register' || authMode === 'forgot' || authMode === 'reset') && (
@@ -1771,8 +2013,10 @@
         { id: 'products', icon: FlaskConical, label: 'Products' },
         ...(customUser.role !== 'Dispatcher' ? [
            { id: 'fleet', icon: Plane, label: 'Aircraft Fleet' },
-           { id: 'certifications', icon: Award, label: 'Certifications' }, { id: 'maintenance', icon: Wrench, label: 'Maintenance' },
-           { id: 'log', icon: FileText, label: 'Mission Log' }, { id: 'notam', icon: Navigation, label: 'NOTAM Tool' },
+           { id: 'certifications', icon: Award, label: 'Certifications' }, 
+           { id: 'maintenance', icon: Wrench, label: 'Maintenance' },
+           { id: 'log', icon: FileText, label: 'Mission Log' }, 
+           { id: 'notam', icon: Navigation, label: 'NOTAM Tool' },
            { id: 'faa-report', icon: FileBarChart, label: 'FAA Report' }
         ] : []),
         ...(customUser.role === 'Manager' ? [{ id: 'settings', icon: Settings2, label: 'Settings' }] : [])
@@ -1780,8 +2024,9 @@
 
       return (
         <div className="flex h-screen bg-[#020617] overflow-hidden font-sans selection:bg-[#9cd33b] selection:text-[#020617] relative">
+          <div className="bg-lightning-container"><div className="lightning-veins"></div></div>
           <div className="absolute top-0 left-0 w-full h-[30rem] bg-gradient-to-b from-[#9cd33b]/[0.02] to-transparent pointer-events-none"></div>
-          <GlobalStyles /><Toast notification={notification} />
+          <GlobalStylesComp /><Toast notification={notification} />
           
           {deleteConfirm && (
             <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
@@ -1796,6 +2041,34 @@
                    <Button variant="danger" className="flex-1 py-4" onClick={executeDelete}>Delete</Button>
                 </div>
               </Card>
+            </div>
+          )}
+
+          {showProfileModal && (
+            <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
+               <Card className="max-w-md w-full relative">
+                  <button onClick={() => setShowProfileModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-white"><X size={20}/></button>
+                  <div className="flex items-center gap-4 mb-8 border-b border-slate-800 pb-6">
+                     <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center"><User size={24} className="text-[#9cd33b]"/></div>
+                     <div className="min-w-0 flex-1">
+                        <h3 className="text-xl font-black uppercase text-white truncate">{customUser.username}</h3>
+                        <p className="text-[#9cd33b] text-xs font-bold uppercase tracking-widest">{customUser.role}</p>
+                     </div>
+                  </div>
+                  <div className="space-y-4">
+                     <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Company</p>
+                        <p className="text-sm font-black text-slate-200 truncate">{customUser.companyName}</p>
+                     </div>
+                     <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Email</p>
+                        <p className="text-sm font-black text-slate-200 truncate">{customUser.email || 'N/A'}</p>
+                     </div>
+                  </div>
+                  <div className="pt-6 mt-6 border-t border-slate-800">
+                     <Button className="w-full" onClick={() => { setShowProfileModal(false); setActiveTab('settings'); }}>Change Password</Button>
+                  </div>
+               </Card>
             </div>
           )}
 
@@ -1846,7 +2119,7 @@
             </div>
           </div>
           <main className="flex-1 overflow-y-auto p-6 lg:p-10 relative z-20 min-w-0">
-            {activeTab === 'dashboard' && <DashboardTab fleet={company.fleet || []} company={company} customUser={customUser} logs={logs} maintRecords={maintRecords} updateFleetInfo={f => { setCompany({...company, fleet: f}); updateDoc(doc(db,'artifacts',appId,'public','data','saas_companies',customUser.companyName.toLowerCase().replace(/[^a-z0-9]/g,'-')), {fleet: f}); }} />}
+            {activeTab === 'dashboard' && <DashboardTab fleet={company.fleet || []} company={company} customUser={customUser} logs={logs} maintRecords={maintRecords} />}
             {activeTab === 'fleet' && <FleetTab company={company} setCompany={setCompany} customUser={customUser} notify={notify} />}
             {activeTab === 'settings' && <SettingsTab company={company} setCompany={setCompany} handleCompanySettingsSave={async e => { e.preventDefault(); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_companies', customUser.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')), company); notify("Settings Saved", "success"); }} customUser={customUser} setCustomUser={setCustomUser} notify={notify} db={db} appId={appId} />}
             {activeTab === 'customers' && <CustomersTab items={customers} logs={logs} isEditing={customerState.isEditing} state={customerState} setState={setCustomerState} onSubmit={e => genericSubmit(e, 'customers', customerState, setCustomerState, defaultCustomerState, "Customer Saved")} onCancel={() => setCustomerState({...defaultCustomerState, isEditing: false})} onDelete={deleteItem} notify={notify} />}
@@ -1858,136 +2131,31 @@
               <NotamTab 
                  notams={notamLogs} isEditing={notamState.isEditing} state={notamState} setState={setNotamState} 
                  derived={{ utcStart: `${((new Date(notamState.date + 'T' + (notamState.localStartTime || '08:00')).getHours() - (company.timezone || -6) + 24) % 24).toString().padStart(2, '0')}${new Date(notamState.date + 'T' + (notamState.localStartTime || '08:00')).getMinutes().toString().padStart(2, '0')}` }} 
-                 generate={() => {
-                    let formattedLat = "000000"; let formattedLon = "000000"; let latDir = "N"; let lonDir = "W";
-                    if (notamState.coordType === 'Decimal') {
-                       let latDecVal = Math.abs(parseFloat(notamState.latDec) || 0);
-                       let lonDecVal = Math.abs(parseFloat(notamState.lonDec) || 0);
-                       formattedLat = formatToNotamDMS(latDecVal, false);
-                       formattedLon = formatToNotamDMS(lonDecVal, true);
-                       latDir = notamState.latDecDir || 'N';
-                       lonDir = notamState.lonDecDir || 'W';
-                    } else {
-                       formattedLat = `${String(notamState.latDMS.d || 0).padStart(2, '0')}${String(notamState.latDMS.m || 0).padStart(2, '0')}${String(notamState.latDMS.s || 0).padStart(2, '0')}`;
-                       formattedLon = `${String(notamState.lonDMS.d || 0).padStart(3, '0')}${String(notamState.lonDMS.m || 0).padStart(2, '0')}${String(notamState.lonDMS.s || 0).padStart(2, '0')}`;
-                       latDir = notamState.latDMS.dir;
-                       lonDir = notamState.lonDMS.dir;
-                    }
-                    const exemptionCert = certs?.find(c => c.name === 'FAA 44807');
-                    const exemptionNo = exemptionCert ? exemptionCert.licenseNumber : 'TBD';
-                    return `!FDC UAS ... ${company.name?.toUpperCase() || 'ORG'}. ${notamState.date} AIRSPACE UAS WI AN AREA DEFINED AS ${notamState.radius}NM RADIUS OF ${formattedLat}${latDir}${formattedLon}${lonDir} SFC-200FT AGL. PURSUANT TO EXEMPTION ${exemptionNo}.`;
-                 }} 
-                 onSubmit={e => {
-                    e.preventDefault();
-                    let lat = 0, lon = 0;
-                    if(notamState.coordType === 'Decimal') { 
-                      lat = Math.abs(parseFloat(notamState.latDec||0)) * (notamState.latDecDir==='S'?-1:1); 
-                      lon = Math.abs(parseFloat(notamState.lonDec||0)) * (notamState.lonDecDir==='E'?1:-1); 
-                    } else if(notamState.coordType === 'DMS') { 
-                      lat = (parseFloat(notamState.latDMS.d||0)+parseFloat(notamState.latDMS.m||0)/60+parseFloat(notamState.latDMS.s||0)/3600)*(notamState.latDMS.dir==='S'?-1:1); 
-                      lon = (parseFloat(notamState.lonDMS.d||0)+parseFloat(notamState.lonDMS.m||0)/60+parseFloat(notamState.lonDMS.s||0)/3600)*(notamState.lonDMS.dir==='W'?-1:1); 
-                    }
-                    const finalState = { ...notamState, picUsername: customUser.username, finalLat: lat, finalLon: lon };
-                    genericSubmit(e, 'notam_logs', finalState, setNotamState, defaultNotamState, "NOTAM Archived");
-                 }} 
+                 generate={generateNotamScript}
+                 onSubmit={handleNotamSubmit}
                  onCancel={() => setNotamState({...defaultNotamState, isEditing: false})} onDelete={deleteItem} notify={notify} company={company} certs={certs}
               />
             )}
             
-            {activeTab === 'faa-report' && <FaaReportTab company={company} fleet={company.fleet || []} certs={certs} monthlyReport={{ logs: logs.filter(l => l.date && l.date.startsWith(reportMonth)), totalHours: (logs.filter(l => l.date && l.date.startsWith(reportMonth)).reduce((a, l) => a + (parseFloat(l.flightTimeMinutes)||0), 0)/60).toFixed(2), flightCount: logs.filter(l => l.date && l.date.startsWith(reportMonth)).length }} reportMonth={reportMonth} setReportMonth={setReportMonth} showFormalReport={showFormalReport} setShowFormalReport={setShowFormalReport} user={user} notify={notify} faaReports={faaReports} onDelete={deleteItem} />}
+            {activeTab === 'faa-report' && (
+              <FaaReportTab company={company} fleet={company.fleet || []} certs={certs} monthlyReport={faaReportData} reportMonth={reportMonth} setReportMonth={setReportMonth} showFormalReport={showFormalReport} setShowFormalReport={setShowFormalReport} user={user} notify={notify} faaReports={faaReports} onDelete={deleteItem} />
+            )}
             
             {activeTab === 'schedule' && (
               <ScheduleTab 
                 workOrders={workOrders} isEditing={workOrderState.isEditing} state={workOrderState} setState={setWorkOrderState} 
-                onSubmit={async (e, newCustData) => { 
-                  e.preventDefault(); 
-                  let c = workOrderState.customer;
-                  if (newCustData && newCustData.name) { 
-                    c = newCustData.name; 
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), { ...newCustData, companyName: customUser.companyName, timestamp: new Date().toISOString() }); 
-                  }
-                  let lat = 0, lon = 0;
-                  if(workOrderState.coordType==='Decimal') { lat = Math.abs(parseFloat(workOrderState.latDec||0)) * (workOrderState.latDecDir==='S'?-1:1); lon = Math.abs(parseFloat(workOrderState.lonDec||0)) * (workOrderState.lonDecDir==='E'?1:-1); }
-                  else if(workOrderState.coordType==='DMS') { lat=(parseFloat(workOrderState.latDMS.d||0)+parseFloat(workOrderState.latDMS.m||0)/60+parseFloat(workOrderState.latDMS.s||0)/3600)*(workOrderState.latDMS.dir==='S'?-1:1); lon=(parseFloat(workOrderState.lonDMS.d||0)+parseFloat(workOrderState.lonDMS.m||0)/60+parseFloat(workOrderState.lonDMS.s||0)/3600)*(workOrderState.lonDMS.dir==='W'?-1:1); }
-                  const finalData = {...workOrderState, customer: c, finalLat: lat, finalLon: lon, isScheduled: !!workOrderState.date, companyName: customUser.companyName, creator: workOrderState.id ? workOrderState.creator : customUser.username}; delete finalData.isEditing;
-                  if(workOrderState.id) await updateDoc(doc(db,'artifacts',appId,'public','data', 'work_orders', workOrderState.id), finalData); else await addDoc(collection(db,'artifacts',appId,'public','data','work_orders'), finalData);
-                  setWorkOrderState({...defaultWorkOrderState, isEditing: false}); notify("Order Saved", "success");
-                }} 
-                onCancel={() => setWorkOrderState({...defaultWorkOrderState, isEditing: false})} customers={customers}
+                onSubmit={handleScheduleSubmit}
+                onCancel={() => setWorkOrderState({...defaultWorkOrderState, isEditing: false})} customers={customers} products={products}
                 deleteItem={deleteItem} customUser={customUser} getStatusColor={getStatusColor} notify={notify}
-                handleDrop={async (e, d) => { const id=e.dataTransfer.getData('text/plain'); if(!id) return; await updateDoc(doc(db,'artifacts',appId,'public','data','work_orders',id),{date:d.toLocaleDateString('en-CA'),isScheduled:true,status:'Scheduled'}); notify("Scheduled", "success"); }}
+                onLogMission={handleLogMissionFromSchedule}
+                handleDrop={handleScheduleDrop}
               />
             )}
             
             {activeTab === 'log' && (
               <MissionLogTab 
-                logs={logs} fleet={company.fleet || []} customers={customers} products={products} crops={crops} isEditing={logState.isEditing} state={logState} setState={setLogState} notify={notify}
-                onSubmit={async (e, newCustData, newProdData) => {
-                  e.preventDefault();
-                  
-                  let c = logState.customer;
-                  if (newCustData && newCustData.name) {
-                     c = newCustData.name;
-                     try {
-                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), { ...newCustData, companyName: customUser.companyName, timestamp: new Date().toISOString() });
-                     } catch(err) {}
-                  }
-
-                  let p = logState.chemical;
-                  if (newProdData && newProdData.name) {
-                     p = newProdData.name;
-                     try {
-                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), { ...newProdData, companyName: customUser.companyName, timestamp: new Date().toISOString() });
-                     } catch(err) {}
-                  }
-                  
-                  let finalCrop = logState.whatWasTreated;
-                  if (logState.whatWasTreated === 'ADD_NEW') {
-                     finalCrop = logState.customCrop;
-                     try {
-                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'crops'), { name: finalCrop, companyName: customUser.companyName, timestamp: new Date().toISOString() });
-                     } catch(err) {}
-                  }
-                  
-                  // Chemical Subtraction Logic
-                  let totalUsed = (parseFloat(logState.appRate) || 0) * (parseFloat(logState.treatedAcreage) || parseFloat(logState.totalAcreage) || 0);
-                  if (p && totalUsed > 0) {
-                     const prodDoc = products.find(prod => prod.name === p);
-                     if (prodDoc && prodDoc.id) {
-                         const currentInv = parseFloat(prodDoc.inventory) || 0;
-                         const newInv = Math.max(0, currentInv - totalUsed);
-                         updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prodDoc.id), { inventory: newInv.toFixed(2) }).catch(()=>{});
-                     }
-                  }
-
-                  // Compute flight time minutes for the backend FAA report
-                  let mins = parseFloat(logState.flightTimeValue) || 0;
-                  if (logState.flightTimeUnit === 'Hours') mins = mins * 60;
-                  
-                  // Compute final coordinates
-                  let lat = 0, lon = 0;
-                  if(logState.coordType === 'Decimal') { 
-                    lat = Math.abs(parseFloat(logState.latDec||0)) * (logState.latDecDir==='S'?-1:1); 
-                    lon = Math.abs(parseFloat(logState.lonDec||0)) * (logState.lonDecDir==='E'?1:-1); 
-                  } else if(logState.coordType === 'DMS') { 
-                    lat = (parseFloat(logState.latDMS.d||0)+parseFloat(logState.latDMS.m||0)/60+parseFloat(logState.latDMS.s||0)/3600)*(logState.latDMS.dir==='S'?-1:1); 
-                    lon = (parseFloat(logState.lonDMS.d||0)+parseFloat(logState.lonDMS.m||0)/60+parseFloat(logState.lonDMS.s||0)/3600)*(logState.lonDMS.dir==='W'?-1:1); 
-                  }
-                  let finalCoords = logState.coordType === 'Decimal' ? `${lat}, ${lon}` : `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-                  
-                  const finalState = {
-                      ...logState,
-                      picUsername: customUser.username,
-                      flightTimeMinutes: mins, // Used by FAA report calc
-                      coordinates: finalCoords,
-                      finalLat: lat,
-                      finalLon: lon,
-                      whatWasTreated: finalCrop,
-                      customer: c,
-                      chemical: p
-                  };
-                  genericSubmit(e, 'flight_logs', finalState, setLogState, defaultLogState, "Mission Logged");
-                }} 
+                logs={logs} notams={notamLogs} fleet={company.fleet || []} customers={customers} products={products} crops={crops} isEditing={logState.isEditing} state={logState} setState={setLogState} notify={notify}
+                onSubmit={handleLogSubmit}
                 onCancel={() => setLogState({...defaultLogState, isEditing: false})} onDelete={deleteItem} kmlRef={kmlInputRef} 
                 handleKml={(e) => {
                    const file = e.target.files[0];
