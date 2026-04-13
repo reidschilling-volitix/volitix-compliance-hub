@@ -1,0 +1,2418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SprayOps | Flight Command Center</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@800;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Omnivore Plugin for parsing existing KML -->
+  <script src="https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.3.1/leaflet-omnivore.min.js"></script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.263.1",
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"
+      }
+    }
+  </script>
+
+  <style>
+    /* Absolute Scrollbar Fix - Locks the Body and limits scrolling strictly to the React Root */
+    html, body { 
+      height: 100%;
+      width: 100%;
+      overflow: hidden !important; 
+      margin: 0; 
+      padding: 0; 
+      background-color: #020617 !important; 
+      color: #e2e8f0 !important; 
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    #root {
+      height: 100%;
+      width: 100%;
+      overflow-y: auto; 
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Organic Branching Lightning Background */
+    .bg-lightning-container {
+      position: fixed;
+      inset: 0;
+      background-color: #01040f;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .lightning-veins {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='1200'%3E%3Cfilter id='lf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.055' numOctaves='5' result='n'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='n' scale='45' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Cg filter='url(%23lf)' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke='%23fef08a' opacity='0.4' stroke-width='6' filter='blur(5px)'%3E%3Cpath d='M100,-50 L120,50 L90,120 L150,250 L130,400 L180,550 L160,700 L220,850 L210,1000' /%3E%3Cpath d='M1100,150 L980,300 L1020,450 L850,600 L900,800 L750,1100' /%3E%3C/g%3E%3Cg stroke='%23fef08a' opacity='0.9' stroke-width='1.5'%3E%3Cpath d='M100,-50 L120,50 L90,120 L150,250 L130,400 L180,550 L160,700 L220,850 L210,1000' /%3E%3Cpath d='M150,250 L250,220 L320,280 L450,240' /%3E%3Cpath d='M130,400 L50,450 L-50,420' /%3E%3Cpath d='M180,550 L300,520 L380,580 L550,540 L620,600' /%3E%3Cpath d='M1100,150 L980,300 L1020,450 L850,600 L900,800 L750,1100' /%3E%3Cpath d='M980,300 L850,280 L750,320 L620,280' /%3E%3Cpath d='M850,600 L950,580 L1050,620' /%3E%3Cpath d='M900,800 L750,780 L650,820 L500,780 L400,850' /%3E%3Cpath d='M-100,700 L50,680 L120,740 L250,710 L350,760 L500,720 L650,780 L800,740 L950,800 L1100,760' /%3E%3Cpath d='M250,710 L280,600 L220,500 L300,400 L250,300' /%3E%3Cpath d='M650,780 L680,650 L620,500 L750,350' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      background-size: 1200px 1200px;
+      animation: slow-pulse 20s infinite ease-in-out;
+    }
+
+    @keyframes slow-pulse {
+      0%, 100% { opacity: 0.15; filter: brightness(0.6); }
+      50% { opacity: 0.30; filter: brightness(1.1); }
+    }
+
+    /* Premium Glassmorphism UI */
+    .glass-card {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Custom Leaflet Map styling for dark mode */
+    .leaflet-container { background: #0f172a; font-family: inherit; }
+    .leaflet-bar a { background-color: #1e293b !important; color: #e2e8f0 !important; border-color: #334155 !important; }
+    .leaflet-bar a:hover { background-color: #334155 !important; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef, useMemo } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { 
+      ShieldCheck, Plane, Plus, History, Navigation, User, CheckCircle2, 
+      Droplets, ClipboardCheck, FileCode, Paperclip, X, FlaskConical, 
+      AlertTriangle, LayoutTemplate, Trash2, Clock, MapPin, 
+      Settings2, Wrench, Edit3, Award, CalendarDays, FileText, 
+      FileBarChart, Printer, Eye, EyeOff, Activity, Compass, LogOut, ArrowRight, Lock, 
+      Users, ChevronLeft, ChevronRight, Target, GripVertical, Map as MapIcon, Send, Cloud, Thermometer, Wind, ArrowUp, ArrowDown, Globe, ExternalLink
+    } from 'lucide-react';
+
+    import { initializeApp } from 'firebase/app';
+    import { 
+      getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, setDoc, getDocs, getDoc, updateDoc, enableIndexedDbPersistence 
+    } from 'firebase/firestore';
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+
+    // ============================================================================
+    // 📂 CONFIG & CONSTANTS
+    // ============================================================================
+
+    const fallbackConfig = {
+      apiKey: "AIzaSyBiW4z1vIMlznLsHs-Xhz44chOYkiYVBKI",
+      authDomain: "spray-drone-compliance-hub.firebaseapp.com",
+      projectId: "spray-drone-compliance-hub",
+      storageBucket: "spray-drone-compliance-hub.firebasestorage.app",
+      messagingSenderId: "565689528030",
+      appId: "1:565689528030:web:3e405f9d0ff30b02061c4f",
+      measurementId: "G-J3QZKLGNX1"
+    };
+
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : fallbackConfig;
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'aviation-compliance-hub';
+
+    try {
+       enableIndexedDbPersistence(db).catch((err) => {
+           console.warn("Offline persistence warning:", err.code);
+       });
+    } catch (e) {}
+
+    // TW Config Objects
+    const tw = {
+      input: "w-full bg-slate-950/50 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b]/60 focus:ring-4 focus:ring-[#9cd33b]/10 focus:bg-slate-900 transition-all duration-300 min-w-0 shadow-inner",
+      label: "text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 truncate block group-focus-within:text-[#9cd33b] transition-colors",
+      btnBase: "px-5 py-3.5 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.96] relative overflow-hidden group",
+      btnPrimary: "bg-gradient-to-r from-[#9cd33b] to-[#7ab02b] text-[#020617] shadow-[0_0_15px_rgba(156,211,59,0.2)] hover:shadow-[0_0_25px_rgba(156,211,59,0.4)] border border-[#bce455]/50",
+      btnSecondary: "bg-slate-800/80 backdrop-blur-md text-slate-200 hover:bg-slate-700 hover:shadow-lg border border-slate-700/50 hover:border-slate-600",
+      btnDanger: "bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]",
+      thead: "bg-slate-800/60 text-slate-400 text-[9px] font-black uppercase tracking-widest border-b border-slate-800",
+      th: "p-6",
+      tr: "hover:bg-slate-800/40 border-b border-slate-800/50 transition-colors",
+      td: "p-6",
+      actionBtnEdit: "text-blue-500 hover:text-blue-400 mr-4 p-2 transition-colors",
+      actionBtnDel: "text-red-500 hover:text-red-400 p-2 transition-colors"
+    };
+
+    // Normalized to 2 GPA assumptions
+    const PREDEFINED_DRONES = [
+      { label: 'DJI Agras T10', rate: 12 }, 
+      { label: 'DJI Agras T20', rate: 20 }, 
+      { label: 'DJI Agras T30', rate: 30 },
+      { label: 'DJI Agras T40', rate: 40 }, 
+      { label: 'DJI Agras T50', rate: 45 },
+      { label: 'DJI Agras T100', rate: 60 },
+      { label: 'XAG P40 / V40', rate: 25 }, 
+      { label: 'XAG P100', rate: 38 }, 
+      { label: 'XAG P100 Pro', rate: 45 }, 
+      { label: 'XAG P150', rate: 55 }, 
+      { label: 'XAG P150 MAX', rate: 60 },
+      { label: 'Hylio AG-110', rate: 12 }, 
+      { label: 'Hylio AG-116', rate: 18 }, 
+      { label: 'Hylio AG-122', rate: 25 }, 
+      { label: 'Hylio AG-130 / AG-230', rate: 35 }, 
+      { label: 'Hylio AG-272', rate: 50 }, 
+      { label: 'EAVision J70', rate: 30 }, 
+      { label: 'EAVision J100', rate: 40 }, 
+      { label: 'EAVision J150', rate: 50 },
+      { label: 'Ceres Air Black Betty', rate: 35 }, 
+      { label: 'Vector AGR HD580', rate: 55 }, 
+      { label: 'Talos T60x', rate: 50 }, 
+      { label: 'Custom (Add New Model)', rate: '' }
+    ];
+
+    const EQUIPMENT_TYPES = ["Drone", "Battery", "Generator", "Controller", "Spray System", "Other"];
+    const TIME_ZONES = [ { label: "Eastern (EST/EDT)", offset: -5 }, { label: "Central (CST/CDT)", offset: -6 }, { label: "Mountain (MST/MDT)", offset: -7 }, { label: "Pacific (PST/PDT)", offset: -8 } ];
+
+    const defaultWorkOrderState = { title: '', customer: '', date: '', acres: '', chemical: '', appRate: '', estHoursMin: '', estHoursMax: '', selectedAircraft: [], kmlFileName: '', kmlData: null, status: 'Pending', isScheduled: false, coordType: 'Decimal', latDec: '', lonDec: '', latDecDir: 'N', lonDecDir: 'W', latDMS: { d: '', m: '', s: '', dir: 'N' }, lonDMS: { d: '', m: '', s: '', dir: 'W' } };
+    const defaultLogState = { date: new Date().toLocaleDateString('en-CA'), startTime: '08:00', endTime: '10:00', selectedAircraft: [], customer: '', locationName: '', totalAcreage: '', treatedAcreage: '', whatWasTreated: 'Corn', customCrop: '', targetPest: '', nozzleDesc: 'Atomizer Sprinklers', targetDistance: '', pumpPressure: '', travelSpeed: '', speedUnit: 'mph', driftPractices: '', coordType: 'Decimal', latDec: '', lonDec: '', latDecDir: 'N', lonDecDir: 'W', latDMS: { d: '', m: '', s: '', dir: 'N' }, lonDMS: { d: '', m: '', s: '', dir: 'W' }, coordinates: '', chemical: '', appRate: '', windSpeed: '', windDirection: 'N', temp: '', tempUnit: 'F', humidity: '', incidents: 'None', damageDescription: '', flightTimeValue: '', flightTimeUnit: 'Hours', flightTimeMinutes: '', kmlData: null, kmlFileName: '', attachedNotam: '' };
+    const defaultMaintState = { date: new Date().toLocaleDateString('en-CA'), equipmentType: 'Drone', customEquipment: '', assetId: '', workPerformed: '' };
+    const defaultCertState = { name: 'FAA Part 107', customName: '', licenseNumber: '', state: '', expirationDate: '', owner: '' };
+    const defaultCustomerState = { name: '', contactName: '', email: '', phone: '', address: '', city: '', state: '', zip: '', notes: '', assignedTo: [] };
+    const defaultProductState = { name: '', defaultRate: '', inventory: '', description: '' };
+    const defaultNotamState = { date: new Date().toLocaleDateString('en-CA'), notamNumber: '', script: '', localStartTime: '08:00', duration: '4', radius: '0.5', coordType: 'Decimal', latDec: '', lonDec: '', latDecDir: 'N', lonDecDir: 'W', latDMS: { d: '', m: '', s: '', dir: 'N' }, lonDMS: { d: '', m: '', s: '', dir: 'W' } };
+
+    // ============================================================================
+    // 📂 GLOBAL HELPER FUNCTIONS
+    // ============================================================================
+
+    const formatToNotamDMS = (input, isLon = false) => {
+      if (!input) return "000000";
+      const parts = input.toString().trim().split(/\s+/);
+      let decimal = parts.length >= 2 ? Math.abs(parseFloat(parts[0]) || 0) + ((parseFloat(parts[1]) || 0) / 60) + ((parseFloat(parts[2]) || 0) / 3600) : Math.abs(parseFloat(input));
+      if (isNaN(decimal)) return "000000";
+      const degrees = Math.floor(decimal);
+      const minutes = Math.floor((decimal - degrees) * 60);
+      const seconds = Math.round((decimal - degrees - (minutes / 60)) * 3600);
+      return `${degrees.toString().padStart(isLon ? 3 : 2, '0')}${minutes.toString().padStart(2, '0')}${seconds.toString().padStart(2, '0')}`;
+    };
+
+    const getStatusColor = (status) => {
+      switch(status) {
+         case 'In Progress': return 'border-blue-500/50 bg-blue-500/10 text-blue-400';
+         case 'Paused': return 'border-amber-500/50 bg-amber-500/10 text-amber-500';
+         case 'Completed': return 'border-[#9cd33b]/50 bg-[#9cd33b]/10 text-[#9cd33b]';
+         case 'Cancelled': return 'border-slate-600 bg-slate-800 text-slate-400';
+         default: return 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500'; 
+      }
+    };
+
+    const copyToClipboard = (text) => {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try { document.execCommand('copy'); } catch (err) {}
+      document.body.removeChild(textArea);
+    };
+
+    const getDistanceMiles = (lat1, lon1, lat2, lon2) => {
+      if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+      const R = 3958.8; 
+      const dLat = (lat2 - lat1) * (Math.PI / 180);
+      const dLon = (lon2 - lon1) * (Math.PI / 180);
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c; 
+    };
+
+    // ============================================================================
+    // 📂 REUSABLE UI COMPONENTS
+    // ============================================================================
+
+    const GlobalStyles = () => (
+      <style>{`
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        @media print { body { background: white !important; color: black !important; } .print\\:hidden { display: none !important; } .print\\:p-0 { padding: 0 !important; } .print\\:shadow-none { box-shadow: none !important; } .print\\:border-none { border: none !important; } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+    );
+
+    const Toast = ({ notification }) => {
+      if (!notification.show) return null;
+      return (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[250] px-6 py-3.5 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] font-black uppercase tracking-widest text-[11px] flex items-center gap-3 animate-fade-in border ${
+          notification.type === 'error' ? 'bg-red-950/90 border-red-500/50 text-red-400 backdrop-blur-md' : 
+          notification.type === 'success' ? 'bg-[#9cd33b]/10 border-[#9cd33b]/50 text-[#9cd33b] backdrop-blur-md' : 
+          'bg-blue-950/90 border-blue-500/50 text-blue-400 backdrop-blur-md'
+        }`}>
+          {notification.type === 'error' ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
+          {String(notification.message)}
+        </div>
+      );
+    };
+
+    const Card = ({ children, className = "" }) => (
+      <div className={`glass-card p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.25)] backdrop-blur-md relative overflow-hidden ${className}`}>
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-600/30 to-transparent"></div>
+        {children}
+      </div>
+    );
+
+    const Button = ({ children, onClick, type="button", variant="primary", className="", disabled=false }) => {
+      const variantClass = variant === "primary" ? tw.btnPrimary : variant === "secondary" ? tw.btnSecondary : tw.btnDanger;
+      return (
+        <button type={type} onClick={onClick} disabled={disabled} className={`${tw.btnBase} ${variantClass} ${className}`}>
+           <div className="absolute inset-0 bg-white/20 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-500 ease-in-out"></div>
+           <span className="relative z-10 flex items-center justify-center gap-2">{children}</span>
+        </button>
+      );
+    };
+
+    const Input = ({ label, className="", rightElement, type="text", ...props }) => (
+      <div className="space-y-2 min-w-0 group">
+        {label && <label className={tw.label}>{label}</label>}
+        <div className="relative">
+          <input type={type} className={`${tw.input} ${className} ${rightElement ? 'pr-12' : ''}`} {...props} />
+          {rightElement && <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">{rightElement}</div>}
+        </div>
+      </div>
+    );
+
+    const Select = ({ label, children, className="", ...props }) => (
+      <div className="space-y-2 min-w-0 group">
+        {label && <label className={tw.label}>{label}</label>}
+        <select className={`${tw.input} font-bold ${className}`} {...props}>{children}</select>
+      </div>
+    );
+
+    const TextArea = ({ label, className="", ...props }) => (
+      <div className="space-y-2 min-w-0 group">
+        {label && <label className={tw.label}>{label}</label>}
+        <textarea className={`${tw.input} h-32 resize-none ${className}`} {...props} />
+      </div>
+    );
+
+    const FormCard = ({ title, icon: Icon, onSubmit, onCancel, submitLabel, children }) => (
+      <div className="space-y-6 animate-fade-in">
+        {onCancel && (
+          <div className="flex">
+            <button type="button" onClick={onCancel} className="flex items-center gap-2 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-widest bg-slate-900 border border-slate-800 px-5 py-3 rounded-xl transition-colors hover:bg-slate-800">
+              <X size={14} /> Cancel
+            </button>
+          </div>
+        )}
+        <Card className="border-[#9cd33b]/20">
+          <div className="flex items-center gap-4 text-[#9cd33b] font-black uppercase text-xs tracking-widest border-b border-slate-800 pb-6 mb-8 flex-wrap">
+            {Icon && <div className="p-2.5 bg-[#9cd33b]/10 rounded-xl shadow-[0_0_15px_rgba(156,211,59,0.15)]"><Icon size={20} className="shrink-0" strokeWidth={2.5} /></div>} 
+            <span className="truncate">{title}</span>
+          </div>
+          <form onSubmit={onSubmit} className="space-y-8">
+            {children}
+            <div className="pt-8 border-t border-slate-800">
+              <Button type="submit" className="w-full py-5 text-sm">{submitLabel || 'Save Record'}</Button>
+            </div>
+          </form>
+        </Card>
+      </div>
+    );
+
+    const TableCard = ({ title, icon: Icon, actionLabel, onAction, secondaryActionLabel, onSecondaryAction, children }) => (
+      <div className="space-y-8 animate-fade-in">
+        <Card className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 !p-6 border-[#9cd33b]/20">
+          <div className="flex items-center gap-5 min-w-0 flex-1">
+            <div className="p-4 bg-gradient-to-br from-[#9cd33b]/20 to-[#9cd33b]/5 border border-[#9cd33b]/30 rounded-[1.5rem] text-[#9cd33b] shrink-0 shadow-[0_0_15px_rgba(156,211,59,0.15)]">
+              {Icon && <Icon size={28} strokeWidth={2.5} />}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-100 to-slate-400 truncate">{title}</h2>
+              <p className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest mt-1 truncate">Manage Database Records</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3 w-full md:w-auto shrink-0">
+            {onSecondaryAction && <Button variant="secondary" onClick={onSecondaryAction}>{secondaryActionLabel}</Button>}
+            {onAction && <Button onClick={onAction} className="flex-1 md:flex-none"><Plus size={16}/> {actionLabel}</Button>}
+          </div>
+        </Card>
+        <div className="bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-[3rem] overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
+             {children}
+          </div>
+        </div>
+      </div>
+    );
+
+    const ActionButtons = ({ onEdit, onDelete }) => (
+      <td className={`${tw.td} text-right whitespace-nowrap`}>
+        {onEdit && <button onClick={onEdit} type="button" className={tw.actionBtnEdit}><Edit3 size={16}/></button>}
+        {onDelete && <button onClick={onDelete} type="button" className={tw.actionBtnDel}><Trash2 size={16}/></button>}
+      </td>
+    );
+
+    const StatsRow = ({ stats }) => (
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 lg:gap-4 min-w-0">
+        <Card className="p-4 flex items-center gap-3 min-w-0">
+           <div className="p-2 lg:p-3 bg-[#9cd33b]/10 rounded-xl lg:rounded-2xl text-[#9cd33b] shrink-0"><CalendarDays size={18}/></div>
+           <div className="min-w-0"><p className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate">This Week</p><p className="text-lg lg:text-2xl font-black text-slate-100 truncate">{stats.thisWeekCount}</p></div>
+        </Card>
+        <Card className="p-4 flex items-center gap-3 min-w-0">
+           <div className="p-2 lg:p-3 bg-amber-500/10 rounded-xl lg:rounded-2xl text-amber-500 shrink-0"><Clock size={18}/></div>
+           <div className="min-w-0"><p className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate">Unscheduled</p><p className="text-lg lg:text-2xl font-black text-amber-500 truncate">{stats.unscheduled}</p></div>
+        </Card>
+        <Card className="p-4 flex items-center gap-3 min-w-0">
+           <div className="p-2 lg:p-3 bg-blue-500/10 rounded-xl lg:rounded-2xl text-blue-400 shrink-0"><ClipboardCheck size={18}/></div>
+           <div className="min-w-0"><p className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate">Total Active</p><p className="text-lg lg:text-2xl font-black text-slate-100 truncate">{stats.activeCount}</p></div>
+        </Card>
+        <Card className="p-4 flex items-center gap-3 min-w-0">
+           <div className="p-2 lg:p-3 bg-blue-500/10 rounded-xl lg:rounded-2xl text-blue-400 shrink-0"><Target size={18}/></div>
+           <div className="min-w-0"><p className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate">Sched Acres</p><p className="text-lg lg:text-2xl font-black text-slate-100 truncate">{stats.schedAcres}</p></div>
+        </Card>
+        <Card className="p-4 flex items-center gap-3 min-w-0">
+           <div className="p-2 lg:p-3 bg-[#9cd33b]/10 rounded-xl lg:rounded-2xl text-[#9cd33b] shrink-0"><CheckCircle2 size={18}/></div>
+           <div className="min-w-0"><p className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate">Comp Acres</p><p className="text-lg lg:text-2xl font-black text-[#9cd33b] truncate">{stats.compAcres}</p></div>
+        </Card>
+      </div>
+    );
+
+    // ============================================================================
+    // 📂 MAP COMPONENTS
+    // ============================================================================
+    
+    const LeafletMap = ({ lat, lon, kmlData, jobs = [], selectedJob = null }) => {
+      const mapContainerRef = useRef(null);
+      const mapInstanceRef = useRef(null);
+      const featureGroupRef = useRef(null);
+
+      useEffect(() => {
+        if (!mapContainerRef.current) return;
+        
+        if (!mapInstanceRef.current) {
+           mapInstanceRef.current = window.L.map(mapContainerRef.current, { zoomControl: false }).setView([lat || 39.82, lon || -98.57], lat ? 15 : 4);
+           window.L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, attribution: 'Tiles &copy; Google' }).addTo(mapInstanceRef.current);
+           featureGroupRef.current = window.L.featureGroup().addTo(mapInstanceRef.current);
+        }
+
+        const map = mapInstanceRef.current;
+        const fg = featureGroupRef.current;
+        fg.clearLayers();
+
+        let hasLayers = false;
+
+        const itemsToPlot = jobs.length > 0 ? jobs : [];
+        if (jobs.length === 0 && (lat || kmlData)) itemsToPlot.push({ finalLat: lat, finalLon: lon, kmlData, id: 'single' });
+
+        itemsToPlot.forEach(job => {
+           const isSelected = selectedJob ? selectedJob.id === job.id : true;
+           const color = isSelected ? '#9cd33b' : '#3b82f6'; 
+           
+           if (job.finalLat && job.finalLon && !isNaN(job.finalLat) && !isNaN(job.finalLon)) {
+               const marker = window.L.marker([job.finalLat, job.finalLon]);
+               if (job.title || job.customer) marker.bindPopup(`<b>${job.title || job.customer}</b>`);
+               fg.addLayer(marker);
+               hasLayers = true;
+           }
+
+           if (job.kmlData && window.omnivore) {
+               try {
+                   const customStyle = window.L.geoJson(null, { style: function() { return { color: color, weight: isSelected ? 4 : 2, opacity: 1, fillColor: color, fillOpacity: isSelected ? 0.4 : 0.1 }; } });
+                   const runLayer = window.omnivore.kml.parse(job.kmlData, null, customStyle);
+                   fg.addLayer(runLayer);
+                   hasLayers = true;
+               } catch(e) {}
+           }
+        });
+
+        if (hasLayers) setTimeout(() => { if (fg.getBounds().isValid()) map.fitBounds(fg.getBounds(), { padding: [20, 20], maxZoom: 16 }); }, 100);
+      }, [lat, lon, kmlData, jobs, selectedJob]);
+
+      return <div ref={mapContainerRef} className="w-full h-full rounded-[2.5rem] overflow-hidden bg-slate-900 border border-slate-800" style={{minHeight: '300px', zIndex: 1}} />;
+    };
+
+    // ============================================================================
+    // 📂 FORM SUB-COMPONENTS
+    // ============================================================================
+
+    const InlineCustomerForm = ({ data, setData, onClose }) => (
+      <div className="md:col-span-2 p-6 bg-slate-950 border border-[#9cd33b]/50 rounded-2xl space-y-4 min-w-0 mt-2">
+        <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-2">
+          <span className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest truncate pr-2">New Customer Profile</span>
+          <Button variant="secondary" onClick={onClose} className="py-2 px-3 shrink-0"><X size={14}/></Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input label="Company/Farm Name" value={data.name} onChange={e => setData({...data, name: e.target.value})} required/>
+          <Input label="Contact Name" value={data.contactName} onChange={e => setData({...data, contactName: e.target.value})}/>
+          <Input label="Email" type="email" value={data.email} onChange={e => setData({...data, email: e.target.value})}/>
+          <Input label="Phone" value={data.phone} onChange={e => setData({...data, phone: e.target.value})}/>
+          <div className="md:col-span-2"><Input label="Address" value={data.address} onChange={e => setData({...data, address: e.target.value})}/></div>
+          <Input label="City" value={data.city} onChange={e => setData({...data, city: e.target.value})}/>
+          <div className="flex gap-4"><div className="flex-1 min-w-0"><Input label="State" value={data.state} onChange={e => setData({...data, state: e.target.value})}/></div><div className="flex-1 min-w-0"><Input label="Zip" value={data.zip} onChange={e => setData({...data, zip: e.target.value})}/></div></div>
+          <div className="md:col-span-2"><TextArea label="Notes" value={data.notes} onChange={e => setData({...data, notes: e.target.value})}/></div>
+        </div>
+      </div>
+    );
+
+    const InlineProductForm = ({ data, setData, onClose }) => (
+      <div className="p-6 bg-slate-950 border border-[#9cd33b]/50 rounded-2xl space-y-4 min-w-0 mt-2">
+        <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-2">
+          <span className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest truncate pr-2">New Product Profile</span>
+          <Button variant="secondary" onClick={onClose} className="py-2 px-3 shrink-0"><X size={14}/></Button>
+        </div>
+        <div className="grid grid-cols-1 gap-4">
+          <Input label="Chemical Name" value={data.name} onChange={e => setData({...data, name: e.target.value})} required/>
+          <Input label="Default Rate" type="number" step="any" value={data.defaultRate} onChange={e => setData({...data, defaultRate: e.target.value})} required rightElement={<span className="text-[9px] text-slate-500 font-black">oz/ac</span>} />
+          <Input label="Current Inventory" type="number" step="any" value={data.inventory} onChange={e => setData({...data, inventory: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">Gal</span>} />
+        </div>
+      </div>
+    );
+
+    const GeoAndKmlInput = ({ state, setState, kmlRef, handleKml, notify }) => {
+      const [pasteVal, setPasteVal] = useState('');
+      const [parsedSuccess, setParsedSuccess] = useState(false);
+      const [isDragging, setIsDragging] = useState(false);
+
+      const handlePaste = (e) => {
+         const val = e.target.value; setPasteVal(val); const str = val.trim().toUpperCase();
+         const dmsRegex = /(\d+)[^\d]+(\d+)[^\d]+([\d.]+)[^\dNS]*([NS])[^\d]*(\d+)[^\d]+(\d+)[^\d]+([\d.]+)[^\dEW]*([EW])/;
+         const dmsMatch = str.match(dmsRegex);
+         if (dmsMatch) {
+             const latDecVal = (parseInt(dmsMatch[1]) + parseInt(dmsMatch[2])/60 + parseFloat(dmsMatch[3])/3600).toFixed(6);
+             const lonDecVal = (parseInt(dmsMatch[5]) + parseInt(dmsMatch[6])/60 + parseFloat(dmsMatch[7])/3600).toFixed(6);
+             setState(prev => ({ ...prev, coordType: 'DMS', latDMS: { d: dmsMatch[1], m: dmsMatch[2], s: dmsMatch[3], dir: dmsMatch[4] }, lonDMS: { d: dmsMatch[5], m: dmsMatch[6], s: dmsMatch[7], dir: dmsMatch[8] }, latDec: latDecVal, latDecDir: dmsMatch[4], lonDec: lonDecVal, lonDecDir: dmsMatch[8] }));
+             setParsedSuccess(true); setTimeout(() => setParsedSuccess(false), 3000); return;
+         }
+         const decRegex = /([+-]?\d+\.\d+)[,\s]+([+-]?\d+\.\d+)/;
+         const decMatch = str.match(decRegex);
+         if (decMatch) {
+             const lat = parseFloat(decMatch[1]); const lon = parseFloat(decMatch[2]);
+             const decToDms = (deg, isLon) => { const abs = Math.abs(deg); const d = Math.floor(abs); const m = Math.floor((abs - d) * 60); const s = ((abs - d - m / 60) * 3600).toFixed(2); const dir = isLon ? (deg >= 0 ? 'E' : 'W') : (deg >= 0 ? 'N' : 'S'); return { d: d.toString(), m: m.toString(), s: s.toString(), dir }; };
+             setState(prev => ({ ...prev, coordType: 'Decimal', latDec: Math.abs(lat).toFixed(6), latDecDir: lat >= 0 ? 'N' : 'S', lonDec: Math.abs(lon).toFixed(6), lonDecDir: lon >= 0 ? 'E' : 'W', latDMS: decToDms(lat, false), lonDMS: decToDms(lon, true) }));
+             setParsedSuccess(true); setTimeout(() => setParsedSuccess(false), 3000);
+         }
+      };
+
+      return (
+        <div className="bg-slate-950 p-8 rounded-3xl border border-slate-800 space-y-6 min-w-0 md:col-span-2">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b border-slate-800 pb-4 min-w-0">
+            <span className="text-[10px] font-black uppercase text-[#9cd33b] tracking-widest truncate">Geolocation</span>
+            <select className={`${tw.input} w-full sm:w-auto truncate`} value={state.coordType} onChange={e => setState({...state, coordType: e.target.value})}>
+              <option value="Decimal">Decimal Degrees</option><option value="DMS">DMS (Deg/Min/Sec)</option>
+            </select>
+          </div>
+          
+          <div className="space-y-2 min-w-0">
+             <label className={tw.label}>Quick Paste (Google Earth / Decimals)</label>
+             <input type="text" placeholder="e.g. 38°31'49.64&quot;N 90°14'13.92&quot;W" className={tw.input} value={pasteVal} onChange={handlePaste} />
+             {parsedSuccess && <p className="text-[9px] text-[#9cd33b] font-black uppercase tracking-widest pl-1 animate-fade-in mt-2">Parsed successfully!</p>}
+          </div>
+
+          {state.coordType === 'Decimal' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0">
+               <div className="space-y-2 min-w-0">
+                  <label className={tw.label}>Latitude</label>
+                  <div className="flex gap-2">
+                     <input type="number" step="any" className={tw.input} value={state.latDec || ''} onChange={e => setState({...state, latDec: e.target.value})}/>
+                     <select className={`${tw.input} w-auto`} value={state.latDecDir || 'N'} onChange={e => setState({...state, latDecDir: e.target.value})}><option value="N">N</option><option value="S">S</option></select>
+                  </div>
+               </div>
+               <div className="space-y-2 min-w-0">
+                  <label className={tw.label}>Longitude</label>
+                  <div className="flex gap-2">
+                     <input type="number" step="any" className={tw.input} value={state.lonDec || ''} onChange={e => setState({...state, lonDec: e.target.value})}/>
+                     <select className={`${tw.input} w-auto`} value={state.lonDecDir || 'W'} onChange={e => setState({...state, lonDecDir: e.target.value})}><option value="W">W</option><option value="E">E</option></select>
+                  </div>
+               </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 min-w-0">
+               <div className="space-y-2 min-w-0">
+                  <label className={tw.label}>Latitude (D/M/S)</label>
+                  <div className="grid grid-cols-4 gap-2">
+                     <input type="number" className={`${tw.input} text-center`} placeholder="Deg" value={state.latDMS?.d || ''} onChange={e => setState({...state, latDMS: {...state.latDMS, d: e.target.value}})}/>
+                     <input type="number" className={`${tw.input} text-center`} placeholder="Min" value={state.latDMS?.m || ''} onChange={e => setState({...state, latDMS: {...state.latDMS, m: e.target.value}})}/>
+                     <input type="number" className={`${tw.input} text-center`} placeholder="Sec" value={state.latDMS?.s || ''} onChange={e => setState({...state, latDMS: {...state.latDMS, s: e.target.value}})}/>
+                     <select className={`${tw.input} text-center font-bold`} value={state.latDMS?.dir || 'N'} onChange={e => setState({...state, latDMS: {...state.latDMS, dir: e.target.value}})}><option>N</option><option>S</option></select>
+                  </div>
+               </div>
+               <div className="space-y-2 min-w-0">
+                  <label className={tw.label}>Longitude (D/M/S)</label>
+                  <div className="grid grid-cols-4 gap-2">
+                     <input type="number" className={`${tw.input} text-center`} placeholder="Deg" value={state.lonDMS?.d || ''} onChange={e => setState({...state, lonDMS: {...state.lonDMS, d: e.target.value}})}/>
+                     <input type="number" className={`${tw.input} text-center`} placeholder="Min" value={state.lonDMS?.m || ''} onChange={e => setState({...state, lonDMS: {...state.lonDMS, m: e.target.value}})}/>
+                     <input type="number" className={`${tw.input} text-center`} placeholder="Sec" value={state.lonDMS?.s || ''} onChange={e => setState({...state, lonDMS: {...state.lonDMS, s: e.target.value}})}/>
+                     <select className={`${tw.input} text-center font-bold`} value={state.lonDMS?.dir || 'W'} onChange={e => setState({...state, lonDMS: {...state.lonDMS, dir: e.target.value}})}><option>W</option><option>E</option></select>
+                  </div>
+               </div>
+            </div>
+          )}
+
+          {kmlRef && handleKml && (
+             <div className="pt-4 border-t border-slate-800 min-w-0">
+                <label className={`${tw.label} mb-2 flex items-center gap-1`}><Paperclip size={10} className="shrink-0"/> Field Boundary Configuration</label>
+                <div 
+                   className={`flex flex-col sm:flex-row gap-4 min-w-0 mt-2 p-4 rounded-[2rem] border-2 border-dashed transition-all duration-300 ${isDragging ? 'border-[#9cd33b] bg-[#9cd33b]/10 scale-[1.02]' : 'border-transparent bg-slate-900/30'}`}
+                   onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                   onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+                   onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                         const file = e.dataTransfer.files[0];
+                         if (file.name.toLowerCase().endsWith('.kml')) {
+                            handleKml({ target: { files: [file] } });
+                         } else if (notify) {
+                            notify("Please drop a valid .KML file", "error");
+                         }
+                      }
+                   }}
+                >
+                   <div className="flex-1 flex gap-2">
+                      <a href="https://earth.google.com/web/" target="_blank" rel="noopener noreferrer" className={`${tw.input} flex-1 bg-blue-500/10 text-blue-400 border-blue-500/30 text-[10px] font-black uppercase flex justify-center items-center gap-2 hover:bg-blue-500/20 transition-colors no-underline`}>
+                        <Globe size={16}/> Open Google Earth
+                      </a>
+                   </div>
+                   <div className="flex items-center text-[9px] text-slate-500 font-black uppercase tracking-widest shrink-0">OR</div>
+                   <div className="flex-1 flex gap-2">
+                      <button type="button" onClick={() => kmlRef.current?.click()} className={`${tw.input} flex-1 text-[10px] font-black uppercase text-center truncate ${isDragging ? 'ring-2 ring-[#9cd33b]' : ''}`}>{state.kmlFileName || 'Drop / Upload KML File'}</button>
+                      {state.kmlFileName && <Button variant="danger" className="shrink-0" onClick={() => { setState({...state, kmlData: null, kmlFileName: ''}); if(kmlRef.current) kmlRef.current.value=""; }}><X size={16}/></Button>}
+                      <input type="file" accept=".kml" ref={kmlRef} className="hidden" onChange={handleKml}/>
+                   </div>
+                </div>
+             </div>
+          )}
+        </div>
+      );
+    };
+
+    // ============================================================================
+    // 📂 TABS COMPONENTS
+    // ============================================================================
+
+    const DashboardTab = ({ fleet, company, customUser, logs, maintRecords }) => {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
+          <Card className="relative group">
+            <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Plane size={14} className="text-[#9cd33b]" /> Active Fleet</p>
+            </div>
+            {fleet.map((d, idx) => (
+              <div key={idx} className="bg-slate-950 border border-slate-800 p-4 rounded-2xl mb-3 flex flex-col gap-2 min-w-0 shadow-sm">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="min-w-0">
+                     <span className="text-sm font-black text-slate-100 block truncate">{String(d.id)}</span>
+                     <p className="text-[9px] text-slate-500 font-bold uppercase mt-1 truncate">{String(d.model)} | S/N: {String(d.sn)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {fleet.length === 0 && <p className="text-[10px] text-slate-500 font-bold uppercase text-center py-4">No aircraft in fleet</p>}
+          </Card>
+          <Card className="min-w-0">
+            <p className="text-[10px] font-black text-slate-500 uppercase mb-6 tracking-widest flex items-center gap-2"><User size={14} className="text-[#9cd33b]" /> PIC In-Charge</p>
+            <p className="text-xl font-black text-slate-100 uppercase tracking-tight truncate">{String(company.supervisor)}</p>
+            <p className="text-xs text-[#9cd33b] font-black mt-2 uppercase tracking-widest truncate">{String(company.name)}</p>
+            <p className="text-[10px] text-slate-500 font-mono mt-4 uppercase tracking-widest p-4 bg-slate-950 rounded-xl border border-slate-800 truncate">FAA Exemption: <span className="text-slate-300">{String(company.exemption || 'N/A')}</span></p>
+          </Card>
+          <Card>
+            <p className="text-[10px] font-black text-slate-500 uppercase mb-6 tracking-widest flex items-center gap-2"><History size={14} className="text-[#9cd33b]" /> Database Metrics</p>
+            <div className="flex items-baseline gap-4 mb-4">
+               <span className="text-5xl font-black text-[#9cd33b] truncate">{logs.length}</span>
+               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">Missions Logged</span>
+            </div>
+            <div className="flex items-baseline gap-4">
+               <span className="text-3xl font-black text-slate-300 truncate">{maintRecords.length}</span>
+               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate">Maintenance Records</span>
+            </div>
+          </Card>
+        </div>
+      );
+    };
+
+    const FleetTab = ({ company, setCompany, customUser, notify }) => {
+      const [editingDrone, setEditingDrone] = useState(null);
+
+      const addNewDrone = async () => {
+        const newId = `N-${Math.floor(1000 + Math.random() * 9000)}`;
+        const updated = [...(company.fleet || []), { id: newId, model: 'DJI Agras T40', sprayRate: 40, sn: '0000' }];
+        setCompany({...company, fleet: updated}); 
+        setEditingDrone(updated.length - 1);
+      };
+
+      const saveFleet = async (f) => {
+         setCompany({...company, fleet: f});
+      };
+
+      return (
+        <div className="space-y-8 animate-fade-in min-w-0">
+          <Card className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-4 min-w-0 flex-1">
+              <div className="p-4 bg-[#9cd33b]/10 border border-[#9cd33b]/20 rounded-3xl text-[#9cd33b] shrink-0"><Plane size={32} /></div>
+              <div className="min-w-0">
+                 <h2 className="text-xl font-black uppercase tracking-tighter text-slate-100 truncate">Aircraft Fleet</h2>
+                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">Manage deployed aircraft</p>
+              </div>
+            </div>
+            {customUser?.role === 'Manager' && <Button onClick={addNewDrone} className="w-full md:w-auto shrink-0"><Plus size={16}/> Register Aircraft</Button>}
+          </Card>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+             {(company.fleet || []).map((d, idx) => (
+                <div key={idx} className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] flex flex-col gap-2 min-w-0 shadow-xl relative">
+                   <div className="flex justify-between items-start gap-4">
+                     <div className="min-w-0">
+                       <span className="text-2xl font-black text-slate-100 block truncate">{String(d.id)}</span>
+                       <p className="text-sm text-[#9cd33b] font-bold uppercase mt-1 truncate">{String(d.model)} <span className="text-slate-500 font-mono text-[10px] ml-2">({d.sprayRate || 30} AC/HR @ 2 GPA)</span></p>
+                       <p className="text-[10px] text-slate-500 font-mono mt-1 truncate">S/N: {String(d.sn)}</p>
+                     </div>
+                     {customUser?.role === 'Manager' && <button onClick={() => setEditingDrone(editingDrone === idx ? null : idx)} className={`shrink-0 p-3 rounded-xl transition-colors ${editingDrone === idx ? 'bg-slate-800 text-white' : 'text-blue-500 bg-blue-500/10 hover:bg-blue-500/20'}`}><Edit3 size={16}/></button>}
+                   </div>
+                   {editingDrone === idx && (
+                     <div className="mt-4 pt-6 border-t border-slate-800 space-y-4">
+                       <Input label="N-Number" placeholder="N-Number" value={d.id} onChange={e => { const f = [...company.fleet]; f[idx].id = e.target.value; setCompany({...company, fleet: f}); }} />
+                       
+                       <Select label="Drone Model" value={PREDEFINED_DRONES.some(p => p.label === d.model) ? d.model : 'Custom (Add New Model)'} onChange={e => { const val = e.target.value; const f = [...company.fleet]; if (val === 'Custom (Add New Model)') { f[idx].model = ''; f[idx].sprayRate = ''; } else { const preset = PREDEFINED_DRONES.find(p => p.label === val); f[idx].model = val; f[idx].sprayRate = preset.rate; } setCompany({...company, fleet: f}); }}>
+                         {PREDEFINED_DRONES.map(p => <option className="bg-slate-900" value={p.label} key={p.label}>{p.label}</option>)}
+                       </Select>
+
+                       {(!PREDEFINED_DRONES.some(p => p.label === d.model) || d.model === '') && (
+                          <div className="grid grid-cols-2 gap-4">
+                             <Input label="Custom Model Name" value={d.model} onChange={e => { const f = [...company.fleet]; f[idx].model = e.target.value; setCompany({...company, fleet: f}); }} />
+                             <Input label="Spray Rate (Acres/Hr @ 2 GPA)" type="number" step="any" value={d.sprayRate} onChange={e => { const f = [...company.fleet]; f[idx].sprayRate = e.target.value; setCompany({...company, fleet: f}); }} />
+                          </div>
+                       )}
+
+                       <Input label="Serial Number" placeholder="S/N" value={d.sn} onChange={e => { const f = [...company.fleet]; f[idx].sn = e.target.value; setCompany({...company, fleet: f}); }} />
+                       <div className="flex gap-3 pt-4 border-t border-slate-800">
+                         <Button variant="secondary" className="flex-1 py-4 text-xs" onClick={() => { setEditingDrone(null); saveFleet(company.fleet); }}>Close</Button>
+                         <Button variant="danger" className="py-4 px-6 shrink-0" onClick={() => { const f = company.fleet.filter((_, i) => i !== idx); saveFleet(f); setEditingDrone(null); }}><Trash2 size={16}/></Button>
+                       </div>
+                     </div>
+                   )}
+                </div>
+             ))}
+             {(company.fleet || []).length === 0 && <div className="col-span-full p-12 border-2 border-dashed border-slate-800 rounded-[2rem] flex flex-col items-center justify-center text-slate-500"><Plane size={48} className="mb-4 opacity-30"/><p className="text-xs font-bold uppercase tracking-widest text-center mt-4">No aircraft in fleet</p></div>}
+          </div>
+        </div>
+      );
+    };
+
+    const SettingsTab = ({ company, setCompany, handleCompanySettingsSave, customUser, setCustomUser, notify, db, appId }) => {
+      const [oldPassword, setOldPassword] = useState('');
+      const [newPassword, setNewPassword] = useState('');
+      const [showPassword, setShowPassword] = useState(false);
+
+      const handleChangePassword = async (e) => {
+         e.preventDefault();
+         if (!oldPassword || !newPassword) return;
+         if (oldPassword !== customUser.password) {
+            return notify("Current password is incorrect.", "error");
+         }
+         try {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_users', customUser.id), { password: newPassword });
+            notify("Password changed successfully!", "success");
+            setCustomUser({...customUser, password: newPassword});
+            setOldPassword('');
+            setNewPassword('');
+         } catch(err) {
+            notify("Error changing password", "error");
+         }
+      };
+
+      return (
+        <div className="space-y-8 animate-fade-in min-w-0">
+          <FormCard title="Command Settings" icon={Settings2} onSubmit={handleCompanySettingsSave} submitLabel="Update Settings">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Input label="Organization Name" value={company.name} onChange={e => setCompany({...company, name: e.target.value})} required/>
+              <Input label="FAA Exemption Number" value={company.exemption} onChange={e => setCompany({...company, exemption: e.target.value})} />
+              <Input label="Chief Supervisor / Pilot" value={company.supervisor} onChange={e => setCompany({...company, supervisor: e.target.value})} required/>
+              <Input label="Part 137 / 107 Cert Number" value={company.certNo} onChange={e => setCompany({...company, certNo: e.target.value})} />
+              <Input label="Business Phone" value={company.phone || ''} onChange={e => setCompany({...company, phone: e.target.value})} />
+              <Select label="Local Time Zone" value={company.timezone} onChange={e => setCompany({...company, timezone: parseInt(e.target.value)})}>
+                 {TIME_ZONES.map(tz => <option className="bg-slate-900" key={tz.offset} value={tz.offset}>{tz.label}</option>)}
+              </Select>
+              <div className="md:col-span-2"><Input label="Business Address" value={company.address || ''} onChange={e => setCompany({...company, address: e.target.value})} /></div>
+            </div>
+          </FormCard>
+
+          <FormCard title="Account Security" icon={Lock} onSubmit={handleChangePassword} submitLabel="Update Password">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               <div className="space-y-2 min-w-0">
+                 <label className={tw.label}>Username</label>
+                 <input className={`${tw.input} cursor-not-allowed opacity-50`} value={customUser?.username || ''} disabled />
+               </div>
+               <div className="space-y-4 md:col-span-2 lg:col-span-1">
+                 <Input 
+                   label="Current Password" 
+                   type={showPassword ? "text" : "password"} 
+                   placeholder="Verify current password..." 
+                   value={oldPassword} 
+                   onChange={e => setOldPassword(e.target.value)} 
+                   required 
+                   rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-slate-300 focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>}
+                 />
+                 <Input 
+                   label="New Password" 
+                   type={showPassword ? "text" : "password"} 
+                   placeholder="Enter new password..." 
+                   value={newPassword} 
+                   onChange={e => setNewPassword(e.target.value)} 
+                   required 
+                 />
+               </div>
+            </div>
+          </FormCard>
+        </div>
+      );
+    };
+
+    const DispatcherOrdersTab = ({ workOrders, isEditing, state, setState, onCancel, onSubmit, customers, products, customUser, getStatusColor, deleteItem, notify }) => {
+      const [inlineCustomer, setInlineCustomer] = useState(false);
+      const [newCustData, setNewCustData] = useState(defaultCustomerState);
+      const [inlineProduct, setInlineProduct] = useState(false);
+      const [newProdData, setNewProdData] = useState(defaultProductState);
+      const kmlRef = useRef(null);
+
+      const handleKml = (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => setState(prev => ({ ...prev, kmlData: ev.target.result, kmlFileName: file.name }));
+        reader.readAsText(file);
+      };
+
+      if (isEditing) {
+        return (
+          <FormCard title={state.id ? "Edit Work Order" : "Send New Work Order"} icon={Send} onSubmit={(e) => onSubmit(e, inlineCustomer ? newCustData : null, inlineProduct ? newProdData : null)} onCancel={onCancel} submitLabel="Submit Order to Ops">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+              <Input label="Job Title" value={state.title} onChange={e => setState({...state, title: e.target.value})} required placeholder="e.g. Field 1 Spray"/>
+              <div className="flex flex-col gap-2 min-w-0">
+                 <Select label="Customer" value={inlineCustomer ? 'ADD_NEW' : state.customer} onChange={e => { if(e.target.value === 'ADD_NEW') setInlineCustomer(true); else { setInlineCustomer(false); setState({...state, customer: e.target.value}); } }} required>
+                   <option className="bg-slate-900" value="">Select Customer...</option>
+                   {customers.map(c => <option className="bg-slate-900" key={c.id} value={c.name}>{String(c.name)}</option>)}
+                   <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">+ Create New Customer</option>
+                 </Select>
+                 {inlineCustomer && <InlineCustomerForm data={newCustData} setData={setNewCustData} onClose={() => setInlineCustomer(false)} />}
+              </div>
+              <Input type="number" label="Acreage" value={state.acres} onChange={e => setState({...state, acres: e.target.value})} required/>
+              <Input label="App Vol. (GPA)" type="number" step="any" value={state.appRate || ''} onChange={e => setState({...state, appRate: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">GPA</span>} />
+              
+              <div className="flex flex-col gap-2 min-w-0 md:col-span-2">
+                 <Select label="Chemical / Product" value={inlineProduct ? 'ADD_NEW' : (state.chemical || '')} onChange={e => { if(e.target.value === 'ADD_NEW') setInlineProduct(true); else { setInlineProduct(false); setState({...state, chemical: e.target.value}); } }} required>
+                    <option className="bg-slate-900" value="" disabled>Select Product...</option>
+                    {products.map(p => <option className="bg-slate-900" key={p.id} value={p.name}>{String(p.name)}</option>)}
+                    <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">+ Create New Product</option>
+                 </Select>
+                 {inlineProduct && <InlineProductForm data={newProdData} setData={setNewProdData} onClose={() => setInlineProduct(false)} />}
+              </div>
+            </div>
+            
+            <GeoAndKmlInput notify={notify} state={state} setState={setState} kmlRef={kmlRef} handleKml={handleKml} />
+          </FormCard>
+        );
+      }
+      
+      return (
+        <TableCard title="My Dispatched Orders" icon={Send} actionLabel="Send New Order" onAction={() => setState({ ...defaultWorkOrderState, isEditing: true })}>
+          <table className="w-full text-left min-w-[700px]">
+            <thead className={tw.thead}>
+               <tr>
+                  <th className={tw.th}>Job Info</th>
+                  <th className={tw.th}>Client / Product</th>
+                  <th className={tw.th}>Status</th>
+                  <th className={`${tw.th} text-right`}>Actions</th>
+               </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/40">
+              {workOrders.length === 0 && <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No orders submitted yet.</td></tr>}
+              {workOrders.map(job => (
+                <tr key={job.id} className={tw.tr}>
+                   <td className={tw.td}>
+                      <p className="font-black text-slate-100 text-sm break-words">{String(job.title || 'Untitled Job')}</p>
+                      <p className="text-[10px] text-slate-400 font-mono mt-1 uppercase break-words">{String(job.acres)} AC</p>
+                   </td>
+                   <td className={tw.td}>
+                      <p className="text-sm text-slate-200 font-black uppercase break-words">{String(job.customer)}</p>
+                      <p className="text-[10px] text-[#9cd33b] font-bold uppercase break-words">{String(job.chemical)} {job.appRate ? `| ${job.appRate} GPA` : ''}</p>
+                   </td>
+                   <td className={tw.td}>
+                      <div className={`inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getStatusColor(job.status)}`}>
+                         {job.status}
+                      </div>
+                   </td>
+                   <td className={`${tw.td} text-right flex justify-end gap-3 items-center whitespace-nowrap`}>
+                      {job.status === 'Pending' && (
+                         <React.Fragment>
+                           <button onClick={() => setState({...job, isEditing: true})} className={tw.actionBtnEdit}><Edit3 size={16}/></button>
+                           <button onClick={() => deleteItem('work_orders', job.id)} className={tw.actionBtnDel}><Trash2 size={16}/></button>
+                         </React.Fragment>
+                      )}
+                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableCard>
+      );
+    };
+
+    const ScheduleTab = ({ workOrders, isEditing, state, setState, onCancel, onSubmit, customers, products, fleet, customUser, handleDrop, handleDropToBacklog, getStatusColor, deleteItem, notify, onLogMission }) => {
+      const [viewMode, setViewMode] = useState('calendar');
+      const [calendarBaseDate, setCalendarBaseDate] = useState(new Date());
+      const [inlineCustomer, setInlineCustomer] = useState(false);
+      const [newCustData, setNewCustData] = useState(defaultCustomerState);
+      const [inlineProduct, setInlineProduct] = useState(false);
+      const [newProdData, setNewProdData] = useState(defaultProductState);
+      const [selectedMapJob, setSelectedMapJob] = useState(null);
+      const kmlRef = useRef(null);
+
+      const calculateEstimate = (acresStr, aircraftArr, kml, appRateStr) => {
+         const acres = parseFloat(acresStr) || 0;
+         if (!acres || !aircraftArr || aircraftArr.length === 0) return { min: state.estHoursMin, max: state.estHoursMax };
+         
+         let totalAcresPerHour = 0;
+         aircraftArr.forEach(droneId => {
+             const droneObj = fleet.find(f => f.id === droneId);
+             let rate = droneObj?.sprayRate ? parseFloat(droneObj.sprayRate) : 30; 
+             totalAcresPerHour += rate;
+         });
+         if (totalAcresPerHour === 0) totalAcresPerHour = 30;
+         
+         const gpa = parseFloat(appRateStr) || 2; 
+         const gpaMultiplier = Math.max(0.5, 1 + ((gpa - 2) * 0.2));
+         
+         let baseHours = (acres / totalAcresPerHour) * gpaMultiplier;
+         baseHours += 0.3; 
+         
+         let hazardMultiplier = 1.0;
+         let hazardCount = 0;
+         if (kml) {
+             const kmlLower = kml.toLowerCase();
+             if (kmlLower.includes('power') || kmlLower.includes('line')) { hazardMultiplier += 0.2; hazardCount++; }
+             if (kmlLower.includes('tree') || kmlLower.includes('obstacle') || kmlLower.includes('house')) { hazardMultiplier += 0.15; hazardCount++; }
+             const coordMatches = (kml.match(/<coordinates>/g) || []).length;
+             if (coordMatches > 2) { hazardMultiplier += 0.15; hazardCount++; } 
+             if (hazardCount === 0) hazardMultiplier += 0.1; 
+         }
+         
+         const adjustedHours = baseHours * hazardMultiplier;
+         const minHrs = Math.max(0.2, (adjustedHours * 0.9)).toFixed(1);
+         const maxHrs = Math.max(0.3, (adjustedHours * 1.25)).toFixed(1);
+         return { min: minHrs, max: maxHrs };
+      };
+
+      const handleKml = (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const kmlStr = ev.target.result;
+            const est = calculateEstimate(state.acres, state.selectedAircraft, kmlStr, state.appRate);
+            setState(prev => ({ ...prev, kmlData: kmlStr, kmlFileName: file.name, estHoursMin: est.min, estHoursMax: est.max }));
+        };
+        reader.readAsText(file);
+      };
+
+      const weekDays = Array.from({length: 7}).map((_, i) => { 
+        const start = new Date(calendarBaseDate);
+        start.setDate(calendarBaseDate.getDate() - calendarBaseDate.getDay());
+        const d = new Date(start); d.setDate(start.getDate() + i); return d; 
+      });
+      
+      const scheduleStats = useMemo(() => {
+         const endOfWeek = new Date(weekDays[0]); endOfWeek.setDate(weekDays[0].getDate() + 6);
+         return {
+            unscheduled: workOrders.filter(w => !w.isScheduled && w.status !== 'Scheduled' && w.status !== 'Completed').length,
+            unscheduledJobs: workOrders.filter(w => !w.isScheduled && w.status !== 'Scheduled' && w.status !== 'Completed'),
+            thisWeekCount: workOrders.filter(w => w.isScheduled && new Date(w.date) >= weekDays[0] && new Date(w.date) <= endOfWeek).length,
+            activeCount: workOrders.filter(w => w.status === 'Scheduled' || w.status === 'In Progress').length,
+            schedAcres: workOrders.filter(w => w.status === 'Scheduled' || w.status === 'In Progress').reduce((a, w) => a + (parseFloat(w.acres)||0), 0),
+            compAcres: workOrders.filter(w => w.status === 'Completed').reduce((a, w) => a + (parseFloat(w.acres)||0), 0)
+         };
+      }, [workOrders, weekDays]);
+
+      const formatMonthDay = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const calendarDateRange = `${formatMonthDay(weekDays[0])} - ${formatMonthDay(weekDays[6])}, ${weekDays[6].getFullYear()}`;
+
+      if (isEditing) {
+        return (
+          <FormCard title={state.id ? "Edit Work Order" : "Create Work Order"} icon={CalendarDays} onSubmit={(e) => onSubmit(e, inlineCustomer ? newCustData : null, inlineProduct ? newProdData : null)} onCancel={onCancel} submitLabel={state.status === 'Completed' ? "Save & Log Mission" : "Save Schedule"}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+              <Input label="Job Title" value={state.title} onChange={e => setState({...state, title: e.target.value})} required placeholder="e.g. Field 1 Spray"/>
+              <div className="flex flex-col gap-2 min-w-0">
+                 <Select label="Customer" value={inlineCustomer ? 'ADD_NEW' : state.customer} onChange={e => { if(e.target.value === 'ADD_NEW') setInlineCustomer(true); else { setInlineCustomer(false); setState({...state, customer: e.target.value}); } }} required>
+                   <option className="bg-slate-900" value="">Select Customer...</option>
+                   {customers.map(c => <option className="bg-slate-900" key={c.id} value={c.name}>{String(c.name)}</option>)}
+                   <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">+ Create New Customer</option>
+                 </Select>
+                 {inlineCustomer && <InlineCustomerForm data={newCustData} setData={setNewCustData} onClose={() => setInlineCustomer(false)} />}
+              </div>
+              
+              <Input type="date" label="Scheduled Date (Optional)" value={state.date} onChange={e => {
+                  const newDate = e.target.value;
+                  let newStatus = state.status;
+                  if (newDate && (!newStatus || newStatus === 'Pending')) newStatus = 'Scheduled';
+                  if (!newDate) newStatus = 'Pending';
+                  setState({...state, date: newDate, status: newStatus, isScheduled: !!newDate});
+              }} />
+              
+              <div className="space-y-2 lg:col-span-2 min-w-0">
+                 <label className={tw.label}>Assign Aircraft (Auto-calculates ETA)</label>
+                 <div className="flex flex-wrap gap-2">
+                    {fleet.map((d, i) => { 
+                       const droneId = d.id || `Unknown-${i}`; 
+                       return (
+                          <button key={i} type="button" onClick={() => { 
+                             const cur = state.selectedAircraft || []; 
+                             const next = cur.includes(droneId) ? cur.filter(a=>a!==droneId) : [...cur, droneId]; 
+                             const est = calculateEstimate(state.acres, next, state.kmlData, state.appRate);
+                             setState({...state, selectedAircraft: next, estHoursMin: est.min, estHoursMax: est.max}); 
+                          }} className={`px-4 py-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all truncate max-w-full ${(state.selectedAircraft || []).includes(droneId) ? 'bg-[#9cd33b] text-[#020617] border-[#9cd33b] shadow-lg' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-[#9cd33b]/50'}`}>
+                             {String(droneId)}
+                          </button>
+                       ); 
+                    })}
+                 </div>
+              </div>
+
+              <Input type="number" label="Acreage" value={state.acres} onChange={e => {
+                  const val = e.target.value;
+                  const est = calculateEstimate(val, state.selectedAircraft, state.kmlData, state.appRate);
+                  setState({...state, acres: val, estHoursMin: est.min, estHoursMax: est.max});
+              }} required/>
+              
+              <Input label="App Vol. (GPA)" type="number" step="any" value={state.appRate || ''} onChange={e => {
+                  const val = e.target.value;
+                  const est = calculateEstimate(state.acres, state.selectedAircraft, state.kmlData, val);
+                  setState({...state, appRate: val, estHoursMin: est.min, estHoursMax: est.max});
+              }} rightElement={<span className="text-[9px] text-slate-500 font-black">GPA</span>} />
+              
+              <div className="space-y-2 min-w-0">
+                 <label className={tw.label}>Est. Time Range (Hrs)</label>
+                 <div className="flex gap-2">
+                   <input type="number" step="any" placeholder="Min" className={tw.input} value={state.estHoursMin} onChange={e => setState({...state, estHoursMin: e.target.value})}/>
+                   <input type="number" step="any" placeholder="Max" className={tw.input} value={state.estHoursMax} onChange={e => setState({...state, estHoursMax: e.target.value})}/>
+                 </div>
+              </div>
+              
+              <div className="flex flex-col gap-2 min-w-0 md:col-span-2">
+                 <Select label="Chemical / Product" value={inlineProduct ? 'ADD_NEW' : (state.chemical || '')} onChange={e => { if(e.target.value === 'ADD_NEW') setInlineProduct(true); else { setInlineProduct(false); setState({...state, chemical: e.target.value}); } }} required>
+                    <option className="bg-slate-900" value="" disabled>Select Product...</option>
+                    {products.map(p => <option className="bg-slate-900" key={p.id} value={p.name}>{String(p.name)}</option>)}
+                    <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">+ Create New Product</option>
+                 </Select>
+                 {inlineProduct && <InlineProductForm data={newProdData} setData={setNewProdData} onClose={() => setInlineProduct(false)} />}
+              </div>
+            </div>
+            
+            <GeoAndKmlInput notify={notify} state={state} setState={setState} kmlRef={kmlRef} handleKml={handleKml} />
+            
+            <Select label="Job Status" value={state.status} onChange={e => setState({...state, status: e.target.value})}>
+              <option className="bg-slate-900" value="Pending">Pending Dispatch</option>
+              <option className="bg-slate-900" value="Scheduled">Scheduled</option>
+              <option className="bg-slate-900" value="In Progress">In Progress</option>
+              <option className="bg-slate-900" value="Paused">Paused (Weather Hold)</option>
+              <option className="bg-slate-900" value="Completed">Completed</option>
+              <option className="bg-slate-900" value="Cancelled">Cancelled</option>
+            </Select>
+          </FormCard>
+        );
+      }
+
+      return (
+        <div className="space-y-6 animate-fade-in min-w-0 h-full flex flex-col">
+           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 min-w-0 shrink-0">
+             <div className="min-w-0">
+               <h2 className="text-3xl font-black uppercase tracking-tighter text-white flex items-center gap-3 truncate"><CalendarDays className="text-[#9cd33b] shrink-0"/> Operations</h2>
+               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2 truncate">Manage your schedule</p>
+             </div>
+             <div className="flex flex-wrap gap-4 shrink-0">
+               <div className="flex bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm p-1">
+                 <button onClick={() => setViewMode('calendar')} className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest ${viewMode === 'calendar' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}><LayoutTemplate size={14}/> Calendar</button>
+                 <button onClick={() => setViewMode('map')} className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest ${viewMode === 'map' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}><MapIcon size={14}/> Map</button>
+               </div>
+               <Button onClick={() => setState({...defaultWorkOrderState, isEditing: true})}><Plus size={16}/> New Order</Button>
+             </div>
+           </div>
+
+           <div className="shrink-0"><StatsRow stats={scheduleStats} /></div>
+
+           {viewMode === 'calendar' ? (
+             <div className="flex flex-col gap-6 min-w-0 flex-1">
+               {/* CALENDAR GOES ON TOP */}
+               <div className="flex-1 bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-xl flex flex-col overflow-hidden min-w-0 min-h-[400px]">
+                  <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 min-w-0 gap-4">
+                    <div className="flex items-center gap-4 lg:gap-6 min-w-0">
+                       <div className="flex gap-2 shrink-0">
+                          <button onClick={() => { const d = new Date(calendarBaseDate); d.setDate(d.getDate() - 7); setCalendarBaseDate(d); }} className="p-2 bg-slate-950 rounded-xl hover:bg-slate-800 text-slate-400"><ChevronLeft size={16}/></button>
+                          <button onClick={() => { const d = new Date(calendarBaseDate); d.setDate(d.getDate() + 7); setCalendarBaseDate(d); }} className="p-2 bg-slate-950 rounded-xl hover:bg-slate-800 text-slate-400"><ChevronRight size={16}/></button>
+                       </div>
+                       <span className="text-sm lg:text-lg font-black text-slate-100 uppercase tracking-tight truncate">{calendarDateRange}</span>
+                    </div>
+                    <Button variant="secondary" onClick={() => setCalendarBaseDate(new Date())} className="shrink-0 text-[9px] py-2 px-3">Today</Button>
+                  </div>
+                  <div className="flex-1 grid grid-cols-7 divide-x divide-slate-800 overflow-x-auto min-w-[600px]">
+                    {weekDays.map((date, idx) => {
+                      const isToday = date.toDateString() === new Date().toDateString();
+                      const strDate = date.toLocaleDateString('en-CA');
+                      const dayJobs = workOrders.filter(w => w.isScheduled && w.date === strDate);
+                      return (
+                        <div key={idx} className={`flex flex-col min-w-[85px] ${isToday ? 'bg-[#9cd33b]/5' : ''}`} onDragOver={e => e.preventDefault()} onDrop={e => handleDrop(e, date)}>
+                          <div className={`p-2 lg:p-4 text-center border-b border-slate-800 ${isToday ? 'bg-[#9cd33b] text-[#020617]' : 'text-slate-400'}`}>
+                             <p className="text-[9px] font-black uppercase tracking-widest mb-1">{date.toLocaleDateString('en-US', { weekday: 'short' })}</p>
+                             <p className="text-xl font-black">{date.getDate()}</p>
+                          </div>
+                          <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+                            {dayJobs.map(job => (
+                              <div key={job.id} draggable onDragStart={(e) => e.dataTransfer.setData('text/plain', job.id)} onClick={() => setState({...job, isEditing: true})} className={`p-2 lg:p-3 rounded-xl text-[9px] lg:text-[10px] shadow-sm border cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity min-w-0 ${getStatusColor(job.status)}`}>
+                                 <div className="flex justify-between items-start">
+                                    <span className="font-black uppercase truncate mb-1 block">{String(job.title || job.customer)}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); onLogMission(job); }} title="Log Mission" className={`${getStatusColor(job.status).includes('bg-[#9cd33b]/10') ? 'text-[#9cd33b] hover:text-white' : 'text-white hover:text-[#9cd33b]'} shrink-0 transition-colors`}><ClipboardCheck size={12}/></button>
+                                 </div>
+                                 <div className="font-bold opacity-80 font-mono truncate block">{String(job.acres)} AC</div>
+                              </div>
+                            ))}
+                            <div onClick={() => setState({...defaultWorkOrderState, date: strDate, isScheduled: true, isEditing: true})} className="w-full h-8 lg:h-10 border border-dashed border-slate-700 rounded-xl flex items-center justify-center text-slate-600 hover:border-slate-500 cursor-pointer transition-colors mt-2">
+                               <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><Plus size={10}/> Add</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+               </div>
+
+               {/* BACKLOG GOES ON BOTTOM IN A GRID VIEW */}
+               <div 
+                 className="w-full bg-slate-900 border border-slate-800 rounded-[2.5rem] flex flex-col shadow-xl overflow-hidden shrink-0 max-h-[400px]"
+                 onDragOver={e => e.preventDefault()}
+                 onDrop={handleDropToBacklog}
+               >
+                  <div className="p-6 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center min-w-0">
+                     <span className="text-xs font-black uppercase tracking-widest text-slate-200 flex items-center gap-2 truncate"><Clock size={14} className="text-amber-500 shrink-0"/> Backlog (Unscheduled Orders)</span>
+                  </div>
+                  <div className="p-3 border-b border-slate-800 bg-amber-500/5 min-w-0">
+                     <p className="text-[9px] text-amber-500/80 font-black uppercase tracking-widest text-center truncate">Drag jobs to calendar to schedule</p>
+                  </div>
+                  <div className="flex-1 p-4 overflow-y-auto">
+                    {scheduleStats.unscheduledJobs.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-slate-600 py-8"><Clock size={32} className="mb-4 opacity-20"/><p className="text-[10px] font-black uppercase tracking-widest text-center px-4">All Caught Up</p></div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {scheduleStats.unscheduledJobs.map(job => (
+                          <div key={job.id} draggable onDragStart={(e) => e.dataTransfer.setData('text/plain', job.id)} className="bg-slate-950 border border-slate-800 p-4 rounded-2xl cursor-grab hover:border-[#9cd33b]/50 shadow-sm active:cursor-grabbing min-w-0 transition-colors">
+                            <div className="flex justify-between items-start mb-2 gap-2 min-w-0">
+                               <span className="text-[10px] font-black text-slate-200 uppercase truncate block">{String(job.title || job.customer)}</span>
+                               <GripVertical size={14} className="text-slate-600 shrink-0"/>
+                            </div>
+                            <p className="text-xs font-bold text-slate-400 truncate">{String(job.customer)}</p>
+                            <p className="text-[9px] text-slate-500 font-mono mt-1 truncate">{String(job.acres)} AC {job.appRate ? `| ${job.appRate} GPA` : ''}</p>
+                            <div className="flex justify-end gap-2 mt-2">
+                               <button onClick={(e) => { e.stopPropagation(); onLogMission(job); }} title="Log Mission" className="text-[#9cd33b] hover:text-[#bce455] transition-colors"><ClipboardCheck size={12}/></button>
+                               <button onClick={(e) => { e.stopPropagation(); setState({...job, isEditing: true}); }} className={tw.actionBtnEdit}><Edit3 size={12}/></button>
+                               <button onClick={(e) => { e.stopPropagation(); deleteItem('work_orders', job.id); }} className={tw.actionBtnDel}><Trash2 size={12}/></button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+               </div>
+             </div>
+           ) : (
+             <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)] min-h-[500px] min-w-0">
+                <div className="w-full lg:w-80 bg-slate-900 border border-slate-800 rounded-[3rem] flex flex-col shadow-xl shrink-0 h-full overflow-hidden">
+                  <div className="p-6 border-b border-slate-800 bg-slate-900/50 min-w-0 shrink-0">
+                     <h3 className="font-black uppercase tracking-widest text-slate-100 text-xs truncate">Mapped Locations</h3>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+                     {workOrders.filter(w => w.finalLat && w.finalLon).map(job => (
+                       <div key={job.id} onClick={() => setSelectedMapJob(job)} className={`p-5 rounded-2xl cursor-pointer transition-colors border shadow-sm min-w-0 ${selectedMapJob?.id === job.id ? 'bg-slate-800 border-[#9cd33b]' : 'bg-slate-950 border-slate-800 hover:border-slate-700'}`}>
+                          <div className="flex justify-between items-start mb-2 gap-2 min-w-0">
+                             <p className="text-[11px] font-black text-slate-200 uppercase truncate block">{String(job.title || job.customer)}</p>
+                             <button onClick={(e) => { e.stopPropagation(); setState({...job, isEditing: true}); }} className={tw.actionBtnEdit}><Edit3 size={14}/></button>
+                          </div>
+                          <p className="text-[9px] text-slate-500 font-mono mt-1 bg-slate-900 p-2 rounded-lg inline-block truncate max-w-full">{String(job.finalLat)}, {String(job.finalLon)}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-3 tracking-widest truncate">{String(job.date || 'Backlog')} | {String(job.acres)} AC {job.appRate ? `| ${job.appRate} GPA` : ''}</p>
+                       </div>
+                     ))}
+                     {workOrders.filter(w => w.finalLat && w.finalLon).length === 0 && <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center mt-10">No mapped work orders</p>}
+                  </div>
+                </div>
+                <div className="flex-1 bg-slate-950 border border-slate-800 shadow-xl rounded-[3rem] relative min-w-0 p-2 h-full overflow-hidden z-10 flex flex-col">
+                  {selectedMapJob ? (
+                     <LeafletMap lat={selectedMapJob.finalLat} lon={selectedMapJob.finalLon} kmlData={selectedMapJob.kmlData} />
+                  ) : (
+                     <div className="flex h-full items-center justify-center text-slate-600 border border-slate-800/50 rounded-[2.5rem] bg-slate-950/50"><div className="text-center px-4"><MapPin size={48} className="mx-auto mb-4 opacity-50"/><p className="text-[11px] font-black uppercase tracking-widest mt-4">Select a job to view map</p></div></div>
+                  )}
+                </div>
+             </div>
+           )}
+        </div>
+      );
+    };
+
+    const WeatherRoutingTab = ({ workOrders, notify }) => {
+      const [targetDate, setTargetDate] = useState(new Date().toLocaleDateString('en-CA'));
+      const [startTime, setStartTime] = useState('08:00');
+      const [routeData, setRouteData] = useState([]);
+      const [isLoading, setIsLoading] = useState(false);
+
+      const dayJobs = useMemo(() => {
+        return workOrders.filter(w => w.date === targetDate && w.status === 'Scheduled' && w.finalLat);
+      }, [workOrders, targetDate]);
+
+      const [orderedJobs, setOrderedJobs] = useState([]);
+
+      useEffect(() => {
+        setOrderedJobs(dayJobs);
+        setRouteData([]);
+      }, [dayJobs]);
+
+      const moveJob = (index, dir) => {
+        const newJobs = [...orderedJobs];
+        if (dir === 'up' && index > 0) {
+          [newJobs[index], newJobs[index - 1]] = [newJobs[index - 1], newJobs[index]];
+        } else if (dir === 'down' && index < newJobs.length - 1) {
+          [newJobs[index], newJobs[index + 1]] = [newJobs[index + 1], newJobs[index]];
+        }
+        setOrderedJobs(newJobs);
+        setRouteData([]); 
+      };
+
+      const updateJobHours = (id, field, value) => {
+        setOrderedJobs(jobs => jobs.map(j => j.id === id ? { ...j, [field]: value } : j));
+        setRouteData([]); 
+      };
+
+      const calculateRouteWeather = async () => {
+        if (orderedJobs.length === 0) return notify("No mapped jobs scheduled for this date.", "error");
+        setIsLoading(true);
+        notify("Pinging weather satellites for route...", "info");
+
+        try {
+          const newRouteData = [];
+          
+          const startDt = new Date();
+          const [hours, minutes] = startTime.split(':');
+          startDt.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+          let currentMinTime = startDt.getTime();
+          let currentMaxTime = startDt.getTime();
+
+          for (let i = 0; i < orderedJobs.length; i++) {
+            const job = orderedJobs[i];
+            const lat = parseFloat(job.finalLat) || 39.82;
+            const lon = parseFloat(job.finalLon) || -98.57;
+
+            let transitData = null;
+            if (i > 0) {
+               const prevJob = orderedJobs[i-1];
+               const pLat = parseFloat(prevJob.finalLat) || 39.82;
+               const pLon = parseFloat(prevJob.finalLon) || -98.57;
+               const distMiles = getDistanceMiles(pLat, pLon, lat, lon);
+
+               const driveHours = (distMiles / 45); // Assuming 45 mph avg speed
+               const transitHours = driveHours + 0.25; // add 15 mins for pack/unpack
+
+               currentMinTime += (transitHours * 60 * 60 * 1000);
+               currentMaxTime += (transitHours * 60 * 60 * 1000);
+
+               transitData = { miles: distMiles.toFixed(1), driveMins: Math.round(driveHours * 60) };
+            }
+            
+            const avgEtaTime = (currentMinTime + currentMaxTime) / 2;
+            const avgDt = new Date(avgEtaTime);
+            const etaHour = avgDt.getHours();
+            
+            const minEtaStr = new Date(currentMinTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const maxEtaStr = new Date(currentMaxTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const etaString = i === 0 ? minEtaStr : `${minEtaStr} - ${maxEtaStr}`;
+
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&start_date=${targetDate}&end_date=${targetDate}&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`);
+            const data = await res.json();
+            
+            if (data.hourly && data.hourly.temperature_2m[etaHour] !== undefined) {
+              const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+              let wd = data.hourly.wind_direction_10m[etaHour];
+              const dirIdx = Math.round(((wd %= 360) < 0 ? wd + 360 : wd) / 45) % 8;
+
+              newRouteData.push({
+                job,
+                eta: etaString,
+                temp: data.hourly.temperature_2m[etaHour],
+                humidity: data.hourly.relative_humidity_2m[etaHour],
+                windSpeed: data.hourly.wind_speed_10m[etaHour],
+                windDir: dirs[dirIdx],
+                transit: transitData
+              });
+            } else {
+              newRouteData.push({ job, eta: etaString, transit: transitData, error: "Forecast unavailable for this hour" });
+            }
+
+            const minHrs = parseFloat(job.estHoursMin) || 1;
+            const maxHrs = parseFloat(job.estHoursMax) || 1.5;
+            
+            currentMinTime += (minHrs * 60 * 60 * 1000);
+            currentMaxTime += (maxHrs * 60 * 60 * 1000);
+          }
+
+          setRouteData(newRouteData);
+          notify("Smart Route & Weather Generated", "success");
+        } catch(e) {
+          notify("Failed to fetch route weather data.", "error");
+        }
+        setIsLoading(false);
+      };
+
+      return (
+        <div className="space-y-8 animate-fade-in min-w-0">
+          <Card className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 !p-6 border-[#9cd33b]/20">
+            <div className="flex items-center gap-5 min-w-0 flex-1">
+              <div className="p-4 bg-gradient-to-br from-[#9cd33b]/20 to-[#9cd33b]/5 border border-[#9cd33b]/30 rounded-[1.5rem] text-[#9cd33b] shrink-0 shadow-[0_0_15px_rgba(156,211,59,0.15)]">
+                <Cloud size={28} strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-100 to-slate-400 truncate">Smart Weather Routing</h2>
+                <p className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest mt-1 truncate">Predictive Environmental Analysis</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="space-y-6">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                <Input type="date" label="Target Date" value={targetDate} onChange={e => setTargetDate(e.target.value)} />
+                <Input type="time" label="Daily Start Time" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                <Button onClick={calculateRouteWeather} disabled={isLoading || orderedJobs.length === 0} className="w-full h-[54px]">
+                  {isLoading ? 'Pinging Satellites...' : 'Generate Route Forecast'}
+                </Button>
+             </div>
+             
+             {orderedJobs.length === 0 && (
+                <div className="text-center py-12 border-2 border-dashed border-slate-800 rounded-3xl text-slate-500 font-bold uppercase tracking-widest text-[10px]">
+                   No scheduled mapped jobs found for {targetDate}.
+                </div>
+             )}
+
+             {orderedJobs.length > 0 && routeData.length === 0 && (
+                <div className="space-y-4 mt-8">
+                   <h3 className="text-[#9cd33b] font-black uppercase text-[10px] tracking-widest border-b border-slate-800 pb-2">Set Job Sequence & Estimates</h3>
+                   <div className="bg-slate-950 border border-slate-800 rounded-3xl p-2 space-y-2">
+                     {orderedJobs.map((job, i) => (
+                        <div key={job.id} className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-slate-900 p-4 rounded-2xl border border-slate-800/50">
+                           <div className="flex items-center gap-4 min-w-0">
+                              <div className="bg-[#9cd33b]/10 text-[#9cd33b] w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0">{i + 1}</div>
+                              <div className="min-w-0">
+                                 <p className="text-sm font-black text-slate-200 uppercase truncate">{job.title || job.customer}</p>
+                                 <p className="text-[10px] text-slate-500 font-mono mt-1 truncate">{job.acres} AC | {job.chemical}</p>
+                              </div>
+                           </div>
+                           
+                           <div className="flex flex-col gap-1 sm:flex-row sm:items-center shrink-0 border-t border-slate-800 md:border-0 pt-3 md:pt-0">
+                              <div className="flex items-center gap-2">
+                                 <input type="number" step="any" placeholder="Min" className={`${tw.input} w-14 p-2 text-center`} value={job.estHoursMin || ''} onChange={e => updateJobHours(job.id, 'estHoursMin', e.target.value)} title="Min Hours" />
+                                 <span className="text-slate-600">-</span>
+                                 <input type="number" step="any" placeholder="Max" className={`${tw.input} w-14 p-2 text-center`} value={job.estHoursMax || ''} onChange={e => updateJobHours(job.id, 'estHoursMax', e.target.value)} title="Max Hours" />
+                                 <span className="text-[9px] text-slate-500 font-black mr-4 uppercase">Hrs</span>
+                              </div>
+                              <div className="flex flex-col gap-1 border-l border-slate-800 pl-4">
+                                 <button onClick={() => moveJob(i, 'up')} disabled={i === 0} className="p-0.5 text-slate-500 hover:text-white disabled:opacity-20 transition-colors"><ArrowUp size={14}/></button>
+                                 <button onClick={() => moveJob(i, 'down')} disabled={i === orderedJobs.length - 1} className="p-0.5 text-slate-500 hover:text-white disabled:opacity-20 transition-colors"><ArrowDown size={14}/></button>
+                              </div>
+                           </div>
+                        </div>
+                     ))}
+                   </div>
+                </div>
+             )}
+
+             {routeData.length > 0 && (
+                <div className="space-y-2 mt-8 relative">
+                   <div className="absolute left-[4.5rem] top-8 bottom-8 w-0.5 bg-slate-800/50 hidden md:block"></div>
+                   <h3 className="text-[#9cd33b] font-black uppercase text-[10px] tracking-widest border-b border-slate-800 pb-2 mb-6">Forecasted Timeline</h3>
+                   
+                   {routeData.map((rd, i) => {
+                      const isHighWind = rd.windSpeed > 10;
+                      const isHot = rd.temp > 85;
+
+                      return (
+                        <React.Fragment key={i}>
+                           {rd.transit && (
+                              <div className="flex flex-col md:flex-row gap-6 relative z-10 my-2 md:my-4 opacity-80">
+                                 <div className="md:w-36 shrink-0 flex justify-center">
+                                    <div className="h-8 w-0.5 border-l-2 border-dashed border-slate-700 hidden md:block"></div>
+                                 </div>
+                                 <div className="flex-1 flex items-center gap-3">
+                                    <div className="h-px w-8 bg-slate-700 hidden md:block"></div>
+                                    <div className="bg-slate-900 border border-slate-700 px-4 py-2 rounded-full text-[9px] font-black uppercase flex items-center gap-2 shadow-sm text-slate-400">
+                                       <Navigation size={12} className="text-blue-400" />
+                                       Drive: {rd.transit.miles} mi (~{rd.transit.driveMins} mins)
+                                    </div>
+                                 </div>
+                              </div>
+                           )}
+                           
+                           <div className="flex flex-col md:flex-row gap-6 relative z-10">
+                              <div className="md:w-36 shrink-0 flex flex-row md:flex-col items-center md:items-start gap-3">
+                                 <div className="bg-slate-900 border border-[#9cd33b]/50 text-[#9cd33b] px-4 py-2 rounded-xl font-black text-xs shadow-lg shadow-[#9cd33b]/10 w-full text-center">
+                                    {rd.eta}
+                                 </div>
+                              </div>
+                              
+                              <div className="flex-1 bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-[2rem] p-6 shadow-xl flex flex-col md:flex-row md:items-center gap-6">
+                                 <div className="flex-1 min-w-0">
+                                    <h4 className="text-lg font-black uppercase text-slate-100 truncate">{rd.job.title || rd.job.customer}</h4>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">{rd.job.customer} | {rd.job.acres} AC</p>
+                                 </div>
+                                 
+                                 {rd.error ? (
+                                    <div className="text-red-500 text-xs font-black uppercase flex items-center gap-2 bg-red-500/10 px-4 py-3 rounded-xl border border-red-500/20"><AlertTriangle size={14}/> {rd.error}</div>
+                                 ) : (
+                                    <div className="flex flex-wrap gap-3 shrink-0">
+                                       <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-black border ${isHot ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'bg-slate-950 text-slate-300 border-slate-800'}`}>
+                                          <Thermometer size={14} className={isHot ? "text-red-500" : "text-amber-500"}/> {rd.temp}°F
+                                       </div>
+                                       <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-black border ${isHighWind ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'bg-slate-950 text-slate-300 border-slate-800'}`}>
+                                          <Wind size={14} className={isHighWind ? "text-red-500" : "text-blue-400"}/> {rd.windSpeed} mph {rd.windDir}
+                                       </div>
+                                       <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-black bg-slate-950 border border-slate-800 text-slate-300">
+                                          <Droplets size={14} className="text-blue-400"/> {rd.humidity}%
+                                       </div>
+                                    </div>
+                                 )}
+                              </div>
+                           </div>
+                        </React.Fragment>
+                      );
+                   })}
+                </div>
+             )}
+          </Card>
+        </div>
+      );
+    };
+
+    const CustomersTab = ({ items, logs, isEditing, state, setState, onCancel, onSubmit, onDelete, notify, companyPilots, customUser }) => {
+      const handleExportQuickBooks = () => {
+        if (items.length === 0) return notify("No customers to export.", "error");
+        if (!logs || logs.length === 0) return notify("No flight logs available to bill.", "error");
+        
+        const headers = ['InvoiceNo', 'Customer', 'InvoiceDate', 'DueDate', 'ServiceDate', 'Item(Product/Service)', 'ItemDescription', 'ItemQuantity'];
+        const csvRows = [headers.join(',')];
+        const today = new Date();
+        const invDate = today.toLocaleDateString('en-US'); 
+        today.setDate(today.getDate() + 30); 
+        const dueDate = today.toLocaleDateString('en-US');
+        
+        let billedItemsCount = 0;
+
+        items.forEach(c => {
+          const customerLogs = logs.filter(l => l.customer === c.name);
+          if (customerLogs.length > 0) {
+            const invoiceNo = `INV-${c.name.substring(0,3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+            customerLogs.forEach(log => {
+              const escapeCSV = (str) => `"${String(str || '').replace(/"/g, '""')}"`;
+              const acres = parseFloat(log.treatedAcreage) || parseFloat(log.totalAcreage) || 0;
+              const crop = log.whatWasTreated === 'ADD_NEW' ? log.customCrop : log.whatWasTreated;
+              const desc = `Flight on ${log.date} at ${log.locationName || 'N/A'} - Crop: ${crop || 'N/A'} - Chemical: ${log.chemical || 'N/A'}`;
+              
+              csvRows.push([ escapeCSV(invoiceNo), escapeCSV(c.name), escapeCSV(invDate), escapeCSV(dueDate), escapeCSV(log.date), escapeCSV('Aerial Application'), escapeCSV(desc), escapeCSV(acres) ].join(','));
+              billedItemsCount++;
+            });
+          }
+        });
+        
+        if (billedItemsCount === 0) {
+           return notify("None of your customers have completed flight logs to bill.", "error");
+        }
+        
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `QuickBooks_Invoices_${new Date().toISOString().slice(0,10)}.csv`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        notify(`Exported ${billedItemsCount} billable flights!`, "success");
+      };
+
+      if (isEditing) {
+        return (
+          <FormCard title={state.id ? 'Edit Customer' : 'New Customer Profile'} icon={Users} onSubmit={onSubmit} onCancel={onCancel}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input label="Company/Farm Name" value={state.name} onChange={e => setState({...state, name: e.target.value})} required/>
+              <Input label="Contact Name" value={state.contactName} onChange={e => setState({...state, contactName: e.target.value})}/>
+              <Input label="Email" type="email" value={state.email} onChange={e => setState({...state, email: e.target.value})}/>
+              <Input label="Phone" value={state.phone} onChange={e => setState({...state, phone: e.target.value})}/>
+              <div className="md:col-span-2"><Input label="Address" value={state.address} onChange={e => setState({...state, address: e.target.value})}/></div>
+              <Input label="City" value={state.city} onChange={e => setState({...state, city: e.target.value})}/>
+              <div className="flex gap-4">
+                 <div className="flex-1 min-w-0"><Input label="State" value={state.state} onChange={e => setState({...state, state: e.target.value})}/></div>
+                 <div className="flex-1 min-w-0"><Input label="Zip" value={state.zip} onChange={e => setState({...state, zip: e.target.value})}/></div>
+              </div>
+              <div className="md:col-span-2"><TextArea label="Notes" value={state.notes} onChange={e => setState({...state, notes: e.target.value})}/></div>
+              
+              {customUser?.role === 'Manager' && (
+                <div className="md:col-span-2 space-y-2 min-w-0">
+                   <label className={tw.label}>Assign to Pilots</label>
+                   <div className="flex flex-wrap gap-2">
+                      {companyPilots.map(p => {
+                         const isAssigned = (state.assignedTo || []).includes(p.username);
+                         return (
+                           <button key={p.id} type="button" onClick={() => {
+                              const cur = state.assignedTo || [];
+                              setState({...state, assignedTo: isAssigned ? cur.filter(u => u !== p.username) : [...cur, p.username]});
+                           }} className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isAssigned ? 'bg-[#9cd33b] text-[#020617] shadow-lg' : 'bg-slate-950 border border-slate-800 text-slate-500'}`}>{p.username}</button>
+                         )
+                      })}
+                   </div>
+                </div>
+              )}
+            </div>
+          </FormCard>
+        );
+      }
+      return (
+        <TableCard title="Client Roster" icon={Users} actionLabel="Customer" onAction={() => setState({ ...defaultCustomerState, isEditing: true })} secondaryActionLabel={<span className="flex items-center gap-1"><FileCode size={14}/> Export Invoices</span>} onSecondaryAction={handleExportQuickBooks}>
+          <table className="w-full text-left min-w-[600px]">
+            <thead className={tw.thead}><tr><th className={tw.th}>Company / Contact</th><th className={tw.th}>Contact Info</th><th className={`${tw.th} text-right`}>Actions</th></tr></thead>
+            <tbody className="divide-y divide-slate-800/40">
+              {items.length === 0 && <tr><td colSpan="3" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No customers saved.</td></tr>}
+              {items.map(c => (
+                <tr key={c.id} className={tw.tr}>
+                  <td className={`${tw.td} min-w-[200px]`}><p className="font-black text-slate-200 text-sm break-words">{String(c.name)}</p><p className="text-[10px] text-slate-400 uppercase mt-1 tracking-widest break-words">{String(c.contactName)}</p></td>
+                  <td className={`${tw.td} min-w-[200px]`}><p className="text-slate-300 text-xs break-all">{String(c.email)}</p><p className="text-[10px] text-slate-500 font-mono mt-1 break-words">{String(c.phone)}</p></td>
+                  <ActionButtons onEdit={() => setState({...c, isEditing: true})} onDelete={() => onDelete('customers', c.id)} />
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableCard>
+      );
+    };
+
+    const ProductsTab = ({ items, isEditing, state, setState, onCancel, onSubmit, onDelete }) => {
+      if (isEditing) {
+        return (
+          <FormCard title={state.id ? 'Edit Product' : 'New Chemical Product'} icon={FlaskConical} onSubmit={onSubmit} onCancel={onCancel}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+              <Input label="Chemical Name" value={state.name} onChange={e => setState({...state, name: e.target.value})} required/>
+              <Input label="Default Rate" type="number" step="any" value={state.defaultRate} onChange={e => setState({...state, defaultRate: e.target.value})} required rightElement={<span className="text-[9px] text-slate-500 font-black">oz/ac</span>} />
+              <Input label="Current Inventory (Stock)" type="number" step="any" value={state.inventory} onChange={e => setState({...state, inventory: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">Gal</span>} />
+              <div className="md:col-span-2"><TextArea label="Product Description" value={state.description || ''} onChange={e => setState({...state, description: e.target.value})} /></div>
+            </div>
+          </FormCard>
+        );
+      }
+      return (
+        <TableCard title="Chemical Inventory" icon={FlaskConical} actionLabel="Product" onAction={() => setState({ ...defaultProductState, isEditing: true })}>
+          <table className="w-full text-left min-w-[600px]">
+            <thead className={tw.thead}><tr><th className={tw.th}>Product Name</th><th className={tw.th}>Application Rate</th><th className={tw.th}>Inventory Stock</th><th className={`${tw.th} text-right`}>Actions</th></tr></thead>
+            <tbody className="divide-y divide-slate-800/40">
+              {items.length === 0 && <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No products saved.</td></tr>}
+              {items.map(p => (
+                <tr key={p.id} className={tw.tr}>
+                   <td className={`${tw.td} min-w-[200px]`}><p className="font-black text-slate-200 text-sm uppercase break-words">{String(p.name)}</p></td>
+                   <td className={`${tw.td} min-w-[150px]`}><p className="text-[#9cd33b] font-black bg-slate-950 inline-block px-3 py-1 rounded-lg text-xs break-words">{String(p.defaultRate || '0')} <span className="text-[9px] text-slate-500 ml-1">oz/ac</span></p></td>
+                   <td className={`${tw.td} min-w-[150px]`}><p className="text-blue-400 font-black bg-slate-950 inline-block px-3 py-1 rounded-lg text-xs break-words">{String(parseFloat(p.inventory || 0).toFixed(2))} <span className="text-[9px] text-slate-500 ml-1">Gal</span></p></td>
+                   <ActionButtons onEdit={() => setState({...p, isEditing: true})} onDelete={() => onDelete('products', p.id)} />
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableCard>
+      );
+    };
+
+    const CertificationsTab = ({ items, company, isEditing, state, setState, onCancel, onSubmit, onDelete }) => {
+      if (isEditing) {
+        return (
+          <FormCard title={state.id ? 'Edit Certification' : 'Upload Certification'} icon={Award} onSubmit={onSubmit} onCancel={onCancel}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+              <Select label="Cert Type" value={state.name} onChange={e => setState({...state, name: e.target.value})} required>
+                <option className="bg-slate-900" value="FAA Part 137">FAA Part 137</option><option className="bg-slate-900" value="FAA 44807">FAA 44807</option><option className="bg-slate-900" value="FAA Part 107">FAA Part 107</option><option className="bg-slate-900" value="Medical">Medical Certificate</option><option className="bg-slate-900" value="State Pesticide">State Pesticide</option><option className="bg-slate-900" value="Other">Other...</option>
+              </Select>
+              {state.name === 'Other' && <Input label="Specify Cert Name" value={state.customName} onChange={e => setState({...state, customName: e.target.value})} required/>}
+              <Input label="License #" value={state.licenseNumber} onChange={e => setState({...state, licenseNumber: e.target.value})} />
+              <Input label="State (If Applicable)" value={state.state} onChange={e => setState({...state, state: e.target.value})} />
+              <Input type="date" label="Expiration Date" value={state.expirationDate} onChange={e => setState({...state, expirationDate: e.target.value})} required/>
+            </div>
+          </FormCard>
+        );
+      }
+      return (
+        <TableCard title="Compliance Certifications" icon={Award} actionLabel="Certificate" onAction={() => setState({ ...defaultCertState, isEditing: true })}>
+          <table className="w-full text-left min-w-[600px]">
+            <thead className={tw.thead}><tr><th className={tw.th}>Certificate</th><th className={tw.th}>License #</th><th className={tw.th}>Expiration</th><th className={`${tw.th} text-right`}>Actions</th></tr></thead>
+            <tbody className="divide-y divide-slate-800/40">
+              {items.length === 0 && <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No certs filed.</td></tr>}
+              {items.map(c => (
+                <tr key={c.id} className={tw.tr}>
+                  <td className={`${tw.td} min-w-[150px]`}><p className="font-black text-slate-200 text-sm break-words">{String(c.name)}</p><p className="text-[10px] text-slate-400 uppercase mt-1 tracking-widest break-words">{String(c.state || 'FEDERAL')}</p></td>
+                  <td className={`${tw.td} min-w-[150px]`}><p className="text-slate-300 font-mono text-xs break-all">{String(c.licenseNumber)}</p></td>
+                  <td className={`${tw.td} min-w-[120px]`}><p className={`text-xs font-black break-words ${new Date(c.expirationDate) < new Date() ? 'text-red-500' : 'text-[#9cd33b]'}`}>{String(c.expirationDate)}</p></td>
+                  <ActionButtons onEdit={() => setState({...c, isEditing: true})} onDelete={() => onDelete('certifications', c.id)} />
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableCard>
+      );
+    };
+
+    const MaintenanceTab = ({ items, equipmentList, isEditing, state, setState, equipState, setEquipState, onCancel, onCancelEquip, onSubmitLog, onSubmitEquip, onDelete }) => {
+      const [inlineEquip, setInlineEquip] = useState(false);
+      const [newEquipData, setNewEquipData] = useState({ name: '', type: 'Drone', serialNumber: '' });
+
+      if (equipState.isEditing) {
+        return (
+          <FormCard title={equipState.id ? 'Edit Equipment' : 'Add New Equipment'} icon={Wrench} onSubmit={onSubmitEquip} onCancel={onCancelEquip}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+              <Input label="Equipment Name / Asset ID" value={equipState.name} onChange={e => setEquipState({...equipState, name: e.target.value})} required/>
+              <Select label="Equipment Type" value={equipState.type} onChange={e => setEquipState({...equipState, type: e.target.value})}>{EQUIPMENT_TYPES.map(t => <option className="bg-slate-900" key={t} value={t}>{t}</option>)}</Select>
+              <div className="md:col-span-2"><Input label="Serial Number (Optional)" value={equipState.serialNumber} onChange={e => setEquipState({...equipState, serialNumber: e.target.value})} /></div>
+            </div>
+          </FormCard>
+        );
+      }
+
+      if (isEditing) {
+        return (
+          <FormCard title={state.id ? 'Edit Log' : 'New Maintenance Log'} icon={Wrench} onSubmit={(e) => onSubmitLog(e, inlineEquip ? newEquipData : null)} onCancel={onCancel}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+              <Input type="date" label="Date" value={state.date} onChange={e => setState({...state, date: e.target.value})} required/>
+              <div className="flex flex-col gap-2 min-w-0">
+                 <Select label="Asset ID / Equipment" value={inlineEquip ? 'ADD_NEW' : state.assetId} onChange={e => { if(e.target.value === 'ADD_NEW') setInlineEquip(true); else { setInlineEquip(false); setState({...state, assetId: e.target.value}); } }} required>
+                    <option className="bg-slate-900" value="">Select Equipment...</option>
+                    {equipmentList.map(eq => <option className="bg-slate-900" key={eq.id} value={eq.name}>{String(eq.name)} ({String(eq.type)})</option>)}
+                    <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">+ Add New Equipment</option>
+                 </Select>
+                 {inlineEquip && (
+                    <div className="p-6 bg-slate-950 border border-[#9cd33b]/50 rounded-2xl space-y-4 min-w-0 mt-2">
+                       <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-2">
+                         <span className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest truncate pr-2">New Equipment Profile</span>
+                         <Button variant="secondary" onClick={() => setInlineEquip(false)} className="py-2 px-3 shrink-0"><X size={14}/></Button>
+                       </div>
+                       <div className="grid grid-cols-1 gap-4">
+                         <Input label="Equipment Name / ID" value={newEquipData.name} onChange={e => setNewEquipData({...newEquipData, name: e.target.value})} required/>
+                         <Select label="Type" value={newEquipData.type} onChange={e => setNewEquipData({...newEquipData, type: e.target.value})}>{EQUIPMENT_TYPES.map(t => <option className="bg-slate-900" key={t} value={t}>{t}</option>)}</Select>
+                         <Input label="Serial Number" value={newEquipData.serialNumber} onChange={e => setNewEquipData({...newEquipData, serialNumber: e.target.value})} />
+                       </div>
+                    </div>
+                 )}
+              </div>
+            </div>
+            <TextArea label="Detailed Work Performed" value={state.workPerformed} onChange={e => setState({...state, workPerformed: e.target.value})} required/>
+          </FormCard>
+        );
+      }
+      
+      return (
+        <div className="space-y-8">
+           <TableCard title="Maintenance Logs" icon={Wrench} actionLabel="Log" onAction={() => setState({ ...defaultMaintState, isEditing: true })}>
+             <table className="w-full text-left min-w-[600px]"><thead className={tw.thead}><tr><th className={tw.th}>Date / Asset</th><th className={tw.th}>Work Performed</th><th className={`${tw.th} text-right`}>Actions</th></tr></thead><tbody className="divide-y divide-slate-800/40">
+               {items.length === 0 && <tr><td colSpan="3" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No maintenance recorded.</td></tr>}
+               {items.map(m => (
+                 <tr key={m.id} className={tw.tr}>
+                   <td className={`${tw.td} min-w-[150px]`}><p className="font-mono text-[#9cd33b] text-xs font-black break-words">{String(m.date)}</p><p className="text-[11px] text-slate-200 font-bold uppercase mt-1 tracking-widest break-words">{String(m.assetId)}</p></td>
+                   <td className={`${tw.td} min-w-[300px]`}><p className="text-slate-400 text-xs leading-relaxed max-w-2xl break-words">{String(m.workPerformed)}</p></td>
+                   <ActionButtons onEdit={() => setState({...m, isEditing: true})} onDelete={() => onDelete('maintenance_records', m.id)} />
+                 </tr>
+               ))}
+             </tbody></table>
+           </TableCard>
+           
+           <TableCard title="Equipment Roster" icon={Wrench} actionLabel="Add Equipment" onAction={() => setEquipState({ name: '', type: 'Drone', serialNumber: '', isEditing: true })}>
+              <table className="w-full text-left min-w-[600px]"><thead className={tw.thead}><tr><th className={tw.th}>Equipment Name / ID</th><th className={tw.th}>Type</th><th className={`${tw.th} text-right`}>Actions</th></tr></thead><tbody className="divide-y divide-slate-800/40">
+               {equipmentList.length === 0 && <tr><td colSpan="3" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No equipment added.</td></tr>}
+               {equipmentList.map(eq => (
+                 <tr key={eq.id} className={tw.tr}>
+                   <td className={`${tw.td} min-w-[150px]`}><p className="font-black text-slate-200 text-sm break-words">{String(eq.name)}</p><p className="text-[10px] text-slate-400 font-mono mt-1 tracking-widest break-words">S/N: {String(eq.serialNumber || 'N/A')}</p></td>
+                   <td className={`${tw.td} min-w-[150px]`}><span className="bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">{String(eq.type)}</span></td>
+                   <ActionButtons onEdit={() => setEquipState({...eq, isEditing: true})} onDelete={() => onDelete('equipment', eq.id)} />
+                 </tr>
+               ))}
+             </tbody></table>
+           </TableCard>
+        </div>
+      );
+    };
+
+    const App = () => {
+      const [user, setUser] = useState(null); 
+      const [customUser, setCustomUser] = useState(null); 
+      const [authMode, setAuthMode] = useState('login'); 
+      const [authForm, setAuthForm] = useState({ companyName: '', username: '', email: '', password: '', role: 'Pilot' });
+      const [showPassword, setShowPassword] = useState(false);
+      const [isOnline, setIsOnline] = useState(navigator.onLine);
+      const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
+      
+      const notify = (message, type = 'info') => { 
+        setNotification({ show: true, message, type }); 
+        setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 4000); 
+      };
+
+      const [activeTab, setActiveTab] = useState('dashboard');
+      const [showFormalReport, setShowFormalReport] = useState(false);
+      const [loading, setLoading] = useState(true);
+
+      const [allSaasUsers, setAllSaasUsers] = useState([]);
+      const [allLogs, setAllLogs] = useState([]);
+      const [allCerts, setAllCerts] = useState([]);
+      const [allMaintRecords, setAllMaintRecords] = useState([]);
+      const [allCustomers, setAllCustomers] = useState([]);
+      const [allProducts, setAllProducts] = useState([]);
+      const [allNotams, setAllNotams] = useState([]);
+      const [allWorkOrders, setAllWorkOrders] = useState([]);
+      const [allCrops, setAllCrops] = useState([]);
+      const [allFaaReports, setAllFaaReports] = useState([]);
+      const [allEquipment, setAllEquipment] = useState([]);
+
+      const [company, setCompany] = useState({ name: 'SprayOps', supervisor: 'Lead Pilot', email: '', phone: '', address: '', certNo: '', exemption: '12345', timezone: -6, fleet: [] });
+      const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
+
+      const [notamState, setNotamState] = useState({ ...defaultNotamState, isEditing: false });
+      const [maintState, setMaintState] = useState({ ...defaultMaintState, isEditing: false });
+      const [certState, setCertState] = useState({ ...defaultCertState, isEditing: false });
+      const [customerState, setCustomerState] = useState({ ...defaultCustomerState, isEditing: false });
+      const [productState, setProductState] = useState({ ...defaultProductState, isEditing: false });
+      const [logState, setLogState] = useState({ ...defaultLogState, isEditing: false });
+      const [workOrderState, setWorkOrderState] = useState({ ...defaultWorkOrderState, isEditing: false });
+      const [equipState, setEquipState] = useState({ name: '', type: 'Drone', serialNumber: '', isEditing: false });
+      
+      const [deleteConfirm, setDeleteConfirm] = useState(null);
+      const [resetUserDoc, setResetUserDoc] = useState(null);
+      const [showProfileModal, setShowProfileModal] = useState(false);
+
+      const kmlInputRef = useRef(null);
+
+      useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+           window.removeEventListener('online', handleOnline);
+           window.removeEventListener('offline', handleOffline);
+        };
+      }, []);
+
+      useEffect(() => {
+        const initAuth = async () => {
+          try { 
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } 
+            else { await signInAnonymously(auth); } 
+          } catch (err) { 
+            console.error(err); 
+            if (err.code === 'auth/operation-not-allowed') notify("Firebase Setup: You must enable 'Anonymous' sign-in in Firebase Auth settings.", "error");
+          }
+        };
+        initAuth();
+        return onAuthStateChanged(auth, (u) => { setUser(u); if (!u) setLoading(false); });
+      }, []);
+
+      useEffect(() => {
+        if (!user) return;
+        const sub = (colName, setFn) => onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', colName), s => setFn(s.docs.map(d => ({id: d.id, ...d.data()}))));
+        const qUsers=sub('saas_users',setAllSaasUsers);
+        const qL=sub('flight_logs',setAllLogs);
+        const qW=sub('work_orders',setAllWorkOrders);
+        const qC=sub('certifications',setAllCerts);
+        const qM=sub('maintenance_records',setAllMaintRecords);
+        const qCust=sub('customers',setAllCustomers);
+        const qP=sub('products',setAllProducts);
+        const qN=sub('notam_logs',setAllNotams);
+        const qCr=sub('crops',setAllCrops);
+        const qF=sub('faa_reports',setAllFaaReports);
+        const qEq=sub('equipment',setAllEquipment);
+        setLoading(false);
+        return () => { qUsers(); qL(); qW(); qC(); qM(); qCust(); qP(); qN(); qCr(); qF(); qEq(); };
+      }, [user]);
+
+      useEffect(() => {
+         if (!customUser) return;
+         const compDocId = customUser.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+         return onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'saas_companies', compDocId), (snap) => {
+            if (snap.exists()) setCompany(snap.data()); 
+         });
+      }, [customUser]);
+
+      const companyUsers = useMemo(() => {
+         if (!customUser) return [];
+         return allSaasUsers.filter(u => u.companyName?.toLowerCase() === customUser?.companyName.toLowerCase());
+      }, [allSaasUsers, customUser]);
+      
+      const companyPilots = useMemo(() => {
+         if (!customUser) return [];
+         return companyUsers.filter(u => u.role === 'Pilot');
+      }, [companyUsers, customUser]);
+
+      const logs = useMemo(() => {
+         if (!customUser) return [];
+         return allLogs.filter(l => l.companyName?.toLowerCase() === customUser?.companyName.toLowerCase()).sort((a,b)=>new Date(b.date)-new Date(a.date));
+      }, [allLogs, customUser]);
+      
+      const workOrders = useMemo(() => {
+         if (!customUser) return [];
+         return allWorkOrders.filter(w => w.companyName?.toLowerCase() === customUser?.companyName.toLowerCase());
+      }, [allWorkOrders, customUser]);
+      
+      const customers = useMemo(() => {
+         if (!customUser) return [];
+         let custs = allCustomers.filter(c => c.companyName?.toLowerCase() === customUser?.companyName.toLowerCase());
+         if (customUser?.role === 'Dispatcher') custs = custs.filter(c => c.creator === customUser.username);
+         if (customUser?.role === 'Pilot') custs = custs.filter(c => c.assignedTo?.includes(customUser.username));
+         return custs.sort((a,b)=>a.name.localeCompare(b.name));
+      }, [allCustomers, customUser]);
+
+      const products = useMemo(() => {
+         if (!customUser) return [];
+         let prods = allProducts.filter(p => p.companyName?.toLowerCase() === customUser?.companyName.toLowerCase());
+         if (customUser?.role === 'Dispatcher') prods = prods.filter(p => p.creator === customUser.username);
+         return prods.sort((a,b)=>a.name.localeCompare(b.name));
+      }, [allProducts, customUser]);
+
+      const certs = useMemo(() => {
+         if (!customUser) return [];
+         return allCerts.filter(c => c.companyName?.toLowerCase() === customUser?.companyName.toLowerCase());
+      }, [allCerts, customUser]);
+      
+      const maintRecords = useMemo(() => {
+         if (!customUser) return [];
+         return allMaintRecords.filter(m => m.companyName?.toLowerCase() === customUser?.companyName.toLowerCase()).sort((a,b)=>new Date(b.date)-new Date(a.date));
+      }, [allMaintRecords, customUser]);
+      
+      const notamLogs = useMemo(() => {
+         if (!customUser) return [];
+         return allNotams.filter(n => n.companyName?.toLowerCase() === customUser?.companyName.toLowerCase()).sort((a,b)=>new Date(b.date)-new Date(a.date));
+      }, [allNotams, customUser]);
+      
+      const crops = useMemo(() => {
+         if (!customUser) return [];
+         return allCrops.filter(c => c.companyName?.toLowerCase() === customUser?.companyName.toLowerCase()).sort((a,b)=>a.name.localeCompare(b.name));
+      }, [allCrops, customUser]);
+      
+      const faaReports = useMemo(() => {
+         if (!customUser) return [];
+         return allFaaReports.filter(r => r.companyName?.toLowerCase() === customUser?.companyName.toLowerCase()).sort((a,b)=>b.month.localeCompare(a.month));
+      }, [allFaaReports, customUser]);
+
+      const equipmentList = useMemo(() => {
+         if (!customUser) return [];
+         return allEquipment.filter(e => e.companyName?.toLowerCase() === customUser?.companyName.toLowerCase()).sort((a,b)=>a.name.localeCompare(b.name));
+      }, [allEquipment, customUser]);
+
+      const faaReportData = useMemo(() => { 
+          if (!customUser) return { logs: [], totalHours: 0, flightCount: 0 };
+          const cLogs = logs.filter(l => l.date && l.date.startsWith(reportMonth)); 
+          return { logs: cLogs, totalHours: (cLogs.reduce((a, l) => a + (parseFloat(l.flightTimeMinutes)||0), 0)/60).toFixed(2), flightCount: cLogs.length }; 
+      }, [logs, reportMonth, customUser]);
+
+      const genericSubmit = async (e, col, stateObj, setFn, defaultState, msg) => {
+        e.preventDefault(); if (!customUser) return;
+        const finalData = { ...stateObj, companyName: customUser.companyName, timestamp: stateObj.timestamp || new Date().toISOString(), creator: stateObj.creator || customUser.username };
+        delete finalData.isEditing;
+        try {
+          if (stateObj.id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', col, stateObj.id), finalData);
+          else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', col), finalData);
+          setFn({...defaultState, isEditing: false}); notify(msg, "success");
+        } catch (err) { notify("Error saving.", "error"); }
+      };
+
+      const deleteItem = (col, id) => {
+        setDeleteConfirm({ col, id });
+      };
+
+      const executeDelete = async () => {
+        if (!deleteConfirm) return;
+        try {
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', deleteConfirm.col, deleteConfirm.id));
+          notify("Record Deleted", "info");
+        } catch (err) {
+          notify("Error deleting record.", "error");
+        }
+        setDeleteConfirm(null);
+      };
+
+      const handleLogin = async (e) => {
+         e.preventDefault();
+         let currentUser = user;
+         if (!currentUser) {
+            if (firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "mock") return notify("Deployment Error: Missing Firebase Keys!", "error");
+            try { const cred = await signInAnonymously(auth); currentUser = cred.user; setUser(cred.user); } 
+            catch(err) { return notify(`Connection Blocked: ${err.message}`, "error"); }
+         }
+         const cN = authForm.companyName?.trim().toLowerCase(); const uN = authForm.username?.trim().toLowerCase();
+         try {
+            const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
+            const found = snap.docs.map(d => ({id: d.id, ...d.data()})).find(u => u.companyName?.toLowerCase() === cN && u.username?.toLowerCase() === uN && u.password === authForm.password);
+            if (found) { setCustomUser(found); setActiveTab(found.role === 'Dispatcher' ? 'dispatch' : 'dashboard'); notify("Welcome back", 'success'); } 
+            else notify("Invalid credentials.", "error");
+         } catch(err) { notify(`Database Error: ${err.message}`, "error"); }
+      };
+
+      const handleRegister = async (e) => {
+         e.preventDefault();
+         let currentUser = user;
+         if (!currentUser) {
+            if (firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "mock") return notify("Deployment Error: Missing Firebase Keys!", "error");
+            try { const cred = await signInAnonymously(auth); currentUser = cred.user; setUser(cred.user); } 
+            catch(err) { return notify(`Connection Blocked: ${err.message}`, "error"); }
+         }
+         try {
+            const cN = authForm.companyName?.trim(); const uN = authForm.username?.trim();
+            const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
+            if (snap.docs.map(d=>d.data()).find(u => u.companyName?.toLowerCase() === cN.toLowerCase() && u.username?.toLowerCase() === uN.toLowerCase())) return notify("Username exists.", "error");
+            const newUser = { companyName: cN, username: uN, email: authForm.email?.trim() || '', password: authForm.password, role: authForm.role };
+            const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'), newUser);
+            if (authForm.role === 'Manager') {
+               const cId = cN.toLowerCase().replace(/[^a-z0-9]/g, '-');
+               const cDoc = doc(db, 'artifacts', appId, 'public', 'data', 'saas_companies', cId);
+               const cDocSnap = await getDoc(cDoc);
+               if (!cDocSnap.exists()) await setDoc(cDoc, { name: cN, supervisor: uN, email: '', phone: '', address: '', certNo: '', exemption: '12345', timezone: -6, fleet: [] });
+            }
+            setCustomUser({ id: docRef.id, ...newUser }); setActiveTab(newUser.role === 'Dispatcher' ? 'dispatch' : 'dashboard'); notify("User created.", "success");
+         } catch (err) { notify(`Database Error: ${err.message}`, "error"); }
+      };
+
+      const handleForgotPassword = async (e) => {
+         e.preventDefault();
+         const cN = authForm.companyName?.trim().toLowerCase(); const uN = authForm.username?.trim().toLowerCase(); const email = authForm.email?.trim().toLowerCase();
+         try {
+            const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'saas_users'));
+            const userDoc = snap.docs.find(d => { const data = d.data(); return data.companyName?.toLowerCase() === cN && data.username?.toLowerCase() === uN && data.email && data.email.toLowerCase() === email; });
+            if (userDoc) { setResetUserDoc({ id: userDoc.id, ...userDoc.data() }); setAuthMode('reset'); notify("Account verified. Please set a new password.", "success"); } 
+            else notify("No matching account found with those exact details.", "error");
+         } catch (err) { notify(`Error: ${err.message}`, "error"); }
+      };
+
+      const handleResetPassword = async (e) => {
+         e.preventDefault();
+         if (!resetUserDoc || !authForm.password) return;
+         try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_users', resetUserDoc.id), { password: authForm.password }); notify("Password updated successfully! You can now log in.", "success"); setAuthMode('login'); setAuthForm({...authForm, password: ''}); setResetUserDoc(null); } 
+         catch (err) { notify(`Error updating password: ${err.message}`, "error"); }
+      };
+
+      const computeUtcStart = () => {
+          try {
+              if (!notamState.date) return "0000";
+              const d = new Date(`${notamState.date}T${notamState.localStartTime || '08:00'}`);
+              if (isNaN(d.getTime())) return "0000";
+              const h = (d.getHours() - (company.timezone || -6) + 24) % 24;
+              return `${h.toString().padStart(2, '0')}${d.getMinutes().toString().padStart(2, '0')}`;
+          } catch(e) {
+              return "0000";
+          }
+      };
+
+      const generateNotamScript = () => {
+          let fLat = "000000"; let fLon = "000000"; let lDir = notamState.coordType==='Decimal'?(notamState.latDecDir||'N'):(notamState.latDMS?.dir||'N'); let lonDir = notamState.coordType==='Decimal'?(notamState.lonDecDir||'W'):(notamState.lonDMS?.dir||'W');
+          if (notamState.coordType === 'Decimal') { fLat = formatToNotamDMS(Math.abs(parseFloat(notamState.latDec) || 0), false); fLon = formatToNotamDMS(Math.abs(parseFloat(notamState.lonDec) || 0), true); } else { fLat = `${String(notamState.latDMS?.d || 0).padStart(2, '0')}${String(notamState.latDMS?.m || 0).padStart(2, '0')}${String(notamState.latDMS?.s || 0).padStart(2, '0')}`; fLon = `${String(notamState.lonDMS?.d || 0).padStart(3, '0')}${String(notamState.lonDMS?.m || 0).padStart(2, '0')}${String(notamState.lonDMS?.s || 0).padStart(2, '0')}`; }
+          const ex = certs?.find(c => c.name === 'FAA 44807'); return `!FDC UAS ... ${company.name?.toUpperCase() || 'ORG'}. ${notamState.date} AIRSPACE UAS WI AN AREA DEFINED AS ${notamState.radius}NM RADIUS OF ${fLat}${lDir}${fLon}${lonDir} SFC-200FT AGL. PURSUANT TO EXEMPTION ${ex ? ex.licenseNumber : 'TBD'}.`;
+      };
+
+      const handleNotamSubmit = (e) => {
+          e.preventDefault(); let lat = 0, lon = 0; if(notamState.coordType === 'Decimal') { lat = Math.abs(parseFloat(notamState.latDec||0)) * (notamState.latDecDir==='S'?-1:1); lon = Math.abs(parseFloat(notamState.lonDec||0)) * (notamState.lonDecDir==='E'?1:-1); } else if(notamState.coordType === 'DMS') { lat = (parseFloat(notamState.latDMS?.d||0)+parseFloat(notamState.latDMS?.m||0)/60+parseFloat(notamState.latDMS?.s||0)/3600)*(notamState.latDMS?.dir==='S'?-1:1); lon = (parseFloat(notamState.lonDMS?.d||0)+parseFloat(notamState.lonDMS?.m||0)/60+parseFloat(notamState.lonDMS?.s||0)/3600)*(notamState.lonDMS?.dir==='W'?-1:1); }
+          genericSubmit(e, 'notam_logs', { ...notamState, picUsername: customUser.username, finalLat: lat, finalLon: lon }, setNotamState, defaultNotamState, "NOTAM Archived");
+      };
+
+      const handleScheduleSubmit = async (e, newCustData, newProdData) => { 
+        e.preventDefault(); 
+        let c = workOrderState.customer;
+        if (newCustData && newCustData.name) { c = newCustData.name; try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), { ...newCustData, companyName: customUser.companyName, timestamp: new Date().toISOString() }); } catch(err) {} }
+        let p = workOrderState.chemical;
+        if (newProdData && newProdData.name) { p = newProdData.name; try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), { ...newProdData, companyName: customUser.companyName, timestamp: new Date().toISOString() }); } catch(err) {} }
+
+        let lat = 0, lon = 0;
+        if (workOrderState.coordType === 'Decimal') { lat = Math.abs(parseFloat(workOrderState.latDec||0)) * (workOrderState.latDecDir==='S'?-1:1); lon = Math.abs(parseFloat(workOrderState.lonDec||0)) * (workOrderState.lonDecDir==='E'?1:-1); }
+        else if (workOrderState.coordType === 'DMS') { lat=(parseFloat(workOrderState.latDMS.d||0)+parseFloat(workOrderState.latDMS.m||0)/60+parseFloat(workOrderState.latDMS.s||0)/3600)*(workOrderState.latDMS.dir==='S'?-1:1); lon=(parseFloat(workOrderState.lonDMS.d||0)+parseFloat(workOrderState.lonDMS.m||0)/60+parseFloat(workOrderState.lonDMS.s||0)/3600)*(workOrderState.lonDMS.dir==='W'?-1:1); }
+        
+        let forcedStatus = workOrderState.status;
+        if (customUser.role === 'Dispatcher' || !workOrderState.date) {
+            forcedStatus = 'Pending';
+        } else if (workOrderState.date && (!forcedStatus || forcedStatus === 'Pending')) {
+            forcedStatus = 'Scheduled';
+        }
+        
+        const forcedDate = customUser.role === 'Dispatcher' ? '' : workOrderState.date;
+
+        const finalData = { 
+           ...workOrderState, 
+           customer: c, 
+           chemical: p, 
+           finalLat: lat, 
+           finalLon: lon, 
+           date: forcedDate, 
+           isScheduled: !!forcedDate && forcedStatus !== 'Pending' && forcedStatus !== 'Cancelled', 
+           status: forcedStatus, 
+           companyName: customUser.companyName, 
+           creator: workOrderState.id ? workOrderState.creator : customUser.username 
+        }; 
+        delete finalData.isEditing;
+
+        if (workOrderState.id) await updateDoc(doc(db,'artifacts',appId,'public','data', 'work_orders', workOrderState.id), finalData); 
+        else await addDoc(collection(db,'artifacts',appId,'public','data','work_orders'), finalData);
+        
+        if (workOrderState.status === 'Completed' && customUser.role !== 'Dispatcher') {
+           setLogState({ 
+               ...defaultLogState, 
+               isEditing: true, 
+               customer: c, 
+               selectedAircraft: workOrderState.selectedAircraft || [], 
+               locationName: workOrderState.title || '', 
+               totalAcreage: workOrderState.acres || '', 
+               treatedAcreage: workOrderState.acres || '', 
+               date: workOrderState.date || new Date().toLocaleDateString('en-CA'), 
+               coordType: workOrderState.coordType || 'Decimal', 
+               latDec: workOrderState.latDec || '', 
+               lonDec: workOrderState.lonDec || '', 
+               latDecDir: workOrderState.latDecDir || 'N', 
+               lonDecDir: workOrderState.lonDecDir || 'W', 
+               latDMS: workOrderState.latDMS || { d: '', m: '', s: '', dir: 'N' }, 
+               lonDMS: workOrderState.lonDMS || { d: '', m: '', s: '', dir: 'W' }, 
+               kmlData: workOrderState.kmlData || null, 
+               kmlFileName: workOrderState.kmlFileName || '', 
+               chemical: p || '',
+               appRate: workOrderState.appRate || '' 
+           });
+           setWorkOrderState({...defaultWorkOrderState, isEditing: false}); setActiveTab('log'); notify("Pre-filling Mission Log.", "success");
+        } else {
+           setWorkOrderState({...defaultWorkOrderState, isEditing: false}); 
+           notify(customUser.role === 'Dispatcher' ? "Order Sent to Ops" : "Order Saved", "success");
+        }
+      };
+
+      const handleDispatcherSubmit = async (e, newCustData, newProdData) => {
+         e.preventDefault();
+         let c = workOrderState.customer;
+         if (newCustData && newCustData.name) { c = newCustData.name; try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), { ...newCustData, companyName: customUser.companyName, timestamp: new Date().toISOString(), creator: customUser.username }); } catch(err) {} }
+         let p = workOrderState.chemical;
+         if (newProdData && newProdData.name) { p = newProdData.name; try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), { ...newProdData, companyName: customUser.companyName, timestamp: new Date().toISOString(), creator: customUser.username }); } catch(err) {} }
+         let lat = 0, lon = 0;
+         if(workOrderState.coordType==='Decimal') { lat = Math.abs(parseFloat(workOrderState.latDec||0)) * (workOrderState.latDecDir==='S'?-1:1); lon = Math.abs(parseFloat(workOrderState.lonDec||0)) * (workOrderState.lonDecDir==='E'?1:-1); }
+         else if(workOrderState.coordType==='DMS') { lat=(parseFloat(workOrderState.latDMS.d||0)+parseFloat(workOrderState.latDMS.m||0)/60+parseFloat(workOrderState.latDMS.s||0)/3600)*(workOrderState.latDMS.dir==='S'?-1:1); lon=(parseFloat(workOrderState.lonDMS.d||0)+parseFloat(workOrderState.lonDMS.m||0)/60+parseFloat(workOrderState.lonDMS.s||0)/3600)*(workOrderState.lonDMS.dir==='W'?-1:1); }
+         const finalData = {...workOrderState, customer: c, chemical: p, finalLat: lat, finalLon: lon, date: '', isScheduled: false, status: 'Pending', companyName: customUser.companyName, creator: workOrderState.id ? workOrderState.creator : customUser.username}; 
+         delete finalData.isEditing;
+         try {
+             if(workOrderState.id) await updateDoc(doc(db,'artifacts',appId,'public','data', 'work_orders', workOrderState.id), finalData); 
+             else await addDoc(collection(db,'artifacts',appId,'public','data','work_orders'), finalData);
+             setWorkOrderState({...defaultWorkOrderState, isEditing: false}); notify("Order Sent to Ops", "success");
+         } catch(err) {
+             notify("Error saving order.", "error");
+         }
+      };
+
+      const handleLogMissionFromSchedule = (job) => {
+         setLogState({
+             ...defaultLogState,
+             isEditing: true,
+             customer: job.customer || '',
+             selectedAircraft: job.selectedAircraft || [],
+             locationName: job.title || '',
+             totalAcreage: job.acres || '',
+             treatedAcreage: job.acres || '',
+             date: job.date || new Date().toLocaleDateString('en-CA'),
+             coordType: job.coordType || 'Decimal',
+             latDec: job.latDec || '',
+             lonDec: job.lonDec || '',
+             latDecDir: job.latDecDir || 'N',
+             lonDecDir: job.lonDecDir || 'W',
+             latDMS: job.latDMS || { d: '', m: '', s: '', dir: 'N' },
+             lonDMS: job.lonDMS || { d: '', m: '', s: '', dir: 'W' },
+             kmlData: job.kmlData || null,
+             kmlFileName: job.kmlFileName || '',
+             chemical: job.chemical || '',
+             appRate: job.appRate || ''
+         });
+         setActiveTab('log');
+         notify("Pre-filled from Work Order", "info");
+      };
+
+      const handleScheduleDrop = async (e, d) => { 
+        const id=e.dataTransfer.getData('text/plain'); 
+        if(!id) return; 
+        await updateDoc(doc(db,'artifacts',appId,'public','data','work_orders',id),{date:d.toLocaleDateString('en-CA'),isScheduled:true,status:'Scheduled'}); notify("Scheduled", "success"); 
+      };
+
+      const handleDropToBacklog = async (e) => { 
+        e.preventDefault(); 
+        const id=e.dataTransfer.getData('text/plain'); 
+        if(!id) return; 
+        await updateDoc(doc(db,'artifacts',appId,'public','data','work_orders',id),{date:'',isScheduled:false,status:'Pending'}); notify("Moved to Backlog", "info"); 
+      };
+
+      const handleLogSubmit = async (e, newCustData, newProdData) => {
+        e.preventDefault();
+        let c = logState.customer; if (newCustData && newCustData.name) { c = newCustData.name; try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), { ...newCustData, companyName: customUser.companyName, timestamp: new Date().toISOString() }); } catch(err) {} }
+        let p = logState.chemical; if (newProdData && newProdData.name) { p = newProdData.name; try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), { ...newProdData, companyName: customUser.companyName, timestamp: new Date().toISOString() }); } catch(err) {} }
+        let finalCrop = logState.whatWasTreated; if (logState.whatWasTreated === 'ADD_NEW') { finalCrop = logState.customCrop; try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'crops'), { name: finalCrop, companyName: customUser.companyName, timestamp: new Date().toISOString() }); } catch(err) {} }
+        
+        let totalUsed = (parseFloat(logState.appRate) || 0) * (parseFloat(logState.treatedAcreage) || parseFloat(logState.totalAcreage) || 0);
+        if (p && totalUsed > 0) { const prodDoc = products.find(prod => prod.name === p); if (prodDoc && prodDoc.id) { const currentInv = parseFloat(prodDoc.inventory) || 0; const newInv = Math.max(0, currentInv - totalUsed); updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', prodDoc.id), { inventory: newInv.toFixed(2) }).catch(()=>{}); } }
+
+        let mins = parseFloat(logState.flightTimeValue) || 0; if (logState.flightTimeUnit === 'Hours') mins = mins * 60;
+        let lat = 0, lon = 0;
+        if(logState.coordType === 'Decimal') { lat = Math.abs(parseFloat(logState.latDec||0)) * (logState.latDecDir==='S'?-1:1); lon = Math.abs(parseFloat(logState.lonDec||0)) * (logState.lonDecDir==='E'?1:-1); }
+        else if(logState.coordType === 'DMS') { lat = (parseFloat(logState.latDMS.d||0)+parseFloat(logState.latDMS.m||0)/60+parseFloat(logState.latDMS.s||0)/3600)*(logState.latDMS.dir==='S'?-1:1); lon = (parseFloat(logState.lonDMS.d||0)+parseFloat(logState.lonDMS.m||0)/60+parseFloat(logState.lonDMS.s||0)/3600)*(logState.lonDMS.dir==='W'?-1:1); }
+        
+        const finalState = { ...logState, picUsername: customUser.username, flightTimeMinutes: mins, coordinates: logState.coordType === 'Decimal' ? `${lat}, ${lon}` : `${lat.toFixed(6)}, ${lon.toFixed(6)}`, finalLat: lat, finalLon: lon, whatWasTreated: finalCrop, customer: c, chemical: p };
+        genericSubmit(e, 'flight_logs', finalState, setLogState, defaultLogState, "Mission Logged");
+      };
+
+      if (loading) return <div className="flex h-screen items-center justify-center bg-[#020617] text-[#9cd33b] font-black uppercase tracking-widest"><GlobalStyles/>Initializing...</div>;
+
+      if (!customUser) {
+        return (
+          <div className="flex flex-col min-h-full w-full p-4 py-12 bg-[#020617] relative overflow-y-auto">
+            <div className="bg-lightning-container"><div className="lightning-veins"></div></div>
+            <div className="absolute top-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-[#9cd33b]/10 blur-[120px] rounded-full pointer-events-none"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40rem] h-[40rem] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+            
+            <GlobalStyles /><Toast notification={notification} />
+            <div className="m-auto w-full max-w-md relative z-10 py-10">
+               <Card className="w-full space-y-8 animate-fade-in border-[#9cd33b]/30 shadow-[0_0_50px_rgba(156,211,59,0.1)] backdrop-blur-2xl bg-slate-900/80">
+                 <div className="text-center flex flex-col items-center">
+                    <div className="w-24 h-24 bg-gradient-to-br from-[#9cd33b]/20 to-transparent rounded-full flex items-center justify-center mb-6 border border-[#9cd33b]/40 shadow-[0_0_40px_rgba(156,211,59,0.2)]"><Lock className="text-[#9cd33b]" size={36} strokeWidth={2.5} /></div>
+                    <h1 className="text-5xl font-['Orbitron'] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-white to-[#9cd33b] drop-shadow-[0_0_15px_rgba(156,211,59,0.4)] mb-1">Spray Ops</h1>
+                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.4em] mt-2 mb-2">Flight Command Center</p>
+                    <div className="h-px w-12 bg-gradient-to-r from-transparent via-[#9cd33b]/50 to-transparent my-4"></div>
+                    <p className="text-[#9cd33b] text-[10px] font-black uppercase tracking-widest mt-2">
+                       {authMode === 'login' ? 'Secure Login' : 
+                        authMode === 'register' ? 'Register Access' : 
+                        authMode === 'forgot' ? 'Account Recovery' : 
+                        'Reset Password'}
+                    </p>
+                 </div>
+                 
+                 {authMode === 'login' && (
+                   <form onSubmit={handleLogin} className="space-y-4">
+                      <Input label="Company Code" value={authForm.companyName} onChange={e => setAuthForm({...authForm, companyName: e.target.value})} required/>
+                      <Input label="Username" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} required/>
+                      <Input 
+                        label="Password" 
+                        type={showPassword ? "text" : "password"} 
+                        value={authForm.password} 
+                        onChange={e => setAuthForm({...authForm, password: e.target.value})} 
+                        required 
+                        rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                      />
+                      <Button type="submit" className="w-full py-4 mt-8">Login <ArrowRight size={16}/></Button>
+                   </form>
+                 )}
+
+                 {authMode === 'register' && (
+                   <form onSubmit={handleRegister} className="space-y-4">
+                      <Input label="Company Code" value={authForm.companyName} onChange={e => setAuthForm({...authForm, companyName: e.target.value})} required/>
+                      <Input label="Username" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} required/>
+                      <Input label="Email Address" type="email" value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} required/>
+                      <Input 
+                        label="Password" 
+                        type={showPassword ? "text" : "password"} 
+                        value={authForm.password} 
+                        onChange={e => setAuthForm({...authForm, password: e.target.value})} 
+                        required 
+                        rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                      />
+                      <Select label="Role" value={authForm.role} onChange={e => setAuthForm({...authForm, role: e.target.value})}><option value="Pilot">Pilot</option><option value="Manager">Manager</option><option value="Dispatcher">Dispatcher</option></Select>
+                      <Button type="submit" className="w-full py-4 mt-8">Create Key <ArrowRight size={16}/></Button>
+                   </form>
+                 )}
+
+                 {authMode === 'forgot' && (
+                   <form onSubmit={handleForgotPassword} className="space-y-4">
+                      <p className="text-xs text-slate-400 text-center mb-6 leading-relaxed">Enter your exact registration details to verify your account and reset your password.</p>
+                      <Input label="Company Code" value={authForm.companyName} onChange={e => setAuthForm({...authForm, companyName: e.target.value})} required/>
+                      <Input label="Username" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} required/>
+                      <Input label="Email Address" type="email" value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} required/>
+                      <Button type="submit" className="w-full py-4 mt-8">Verify Account <ArrowRight size={16}/></Button>
+                   </form>
+                 )}
+
+                 {authMode === 'reset' && (
+                   <form onSubmit={handleResetPassword} className="space-y-4">
+                      <div className="bg-[#9cd33b]/10 border border-[#9cd33b]/30 p-4 rounded-2xl mb-6">
+                         <p className="text-xs text-[#9cd33b] font-bold text-center">Account verified for <span className="font-black">{resetUserDoc?.username}</span>.</p>
+                      </div>
+                      <Input 
+                        label="New Password" 
+                        type={showPassword ? "text" : "password"} 
+                        value={authForm.password} 
+                        onChange={e => setAuthForm({...authForm, password: e.target.value})} 
+                        required 
+                        rightElement={<button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-[#9cd33b] transition-colors focus:outline-none">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>} 
+                      />
+                      <Button type="submit" className="w-full py-4 mt-8">Update Password <ArrowRight size={16}/></Button>
+                   </form>
+                 )}
+
+                 {authMode === 'login' && (
+                   <div className="flex flex-col gap-4 text-center pt-8 border-t border-slate-800 mt-8">
+                      <button type="button" onClick={() => setAuthMode('forgot')} className="text-[10px] text-blue-400 hover:text-blue-300 uppercase font-black tracking-widest transition-colors">Forgot Password?</button>
+                      <button type="button" onClick={() => setAuthMode('register')} className="text-[10px] text-slate-400 hover:text-slate-200 uppercase font-black tracking-widest transition-colors">Need an account? Register Here</button>
+                   </div>
+                 )}
+                 {(authMode === 'register' || authMode === 'forgot' || authMode === 'reset') && (
+                   <div className="text-center pt-8 border-t border-slate-800 mt-8">
+                      <button type="button" onClick={() => { setAuthMode('login'); setResetUserDoc(null); }} className="text-[10px] text-slate-400 hover:text-slate-200 uppercase font-black tracking-widest transition-colors">{authMode === 'reset' ? 'Cancel' : 'Already have access? Login Here'}</button>
+                   </div>
+                 )}
+               </Card>
+            </div>
+          </div>
+        );
+      }
+
+      const tabs = [
+        ...(customUser.role !== 'Dispatcher' ? [{ id: 'dashboard', icon: ShieldCheck, label: 'Dashboard' }] : []),
+        ...(customUser.role !== 'Dispatcher' ? [{ id: 'schedule', icon: CalendarDays, label: 'Schedule' }] : [{ id: 'dispatch', icon: Send, label: 'My Orders' }]),
+        ...(customUser.role !== 'Dispatcher' ? [{ id: 'smart-weather', icon: Cloud, label: 'Smart Route' }] : []),
+        { id: 'customers', icon: Users, label: 'Customers' },
+        { id: 'products', icon: FlaskConical, label: 'Products' },
+        ...(customUser.role !== 'Dispatcher' ? [
+           { id: 'fleet', icon: Plane, label: 'Aircraft Fleet' },
+           { id: 'certifications', icon: Award, label: 'Certifications' }, { id: 'maintenance', icon: Wrench, label: 'Maintenance' },
+           { id: 'log', icon: FileText, label: 'Mission Log' }, { id: 'notam', icon: Navigation, label: 'NOTAM Tool' },
+           { id: 'faa-report', icon: FileBarChart, label: 'FAA Report' }
+        ] : []),
+        ...(customUser.role === 'Manager' ? [{ id: 'settings', icon: Settings2, label: 'Settings' }] : [])
+      ];
+
+      return (
+        <div className="flex h-full w-full bg-[#020617] overflow-hidden font-sans selection:bg-[#9cd33b] selection:text-[#020617] relative">
+          <div className="bg-lightning-container"><div className="lightning-veins"></div></div>
+          <div className="absolute top-0 left-0 w-full h-[30rem] bg-gradient-to-b from-[#9cd33b]/[0.02] to-transparent pointer-events-none"></div>
+          <GlobalStyles /><Toast notification={notification} />
+          
+          {deleteConfirm && (
+            <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
+              <Card className="max-w-sm w-full border-red-500/30">
+                <div className="flex items-center gap-3 text-red-500 mb-4">
+                   <AlertTriangle size={24} />
+                   <h3 className="text-xl font-black uppercase tracking-widest">Confirm Deletion</h3>
+                </div>
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8 leading-relaxed">This record will be permanently removed from the database. This action cannot be reversed.</p>
+                <div className="flex gap-4">
+                   <Button variant="secondary" className="flex-1 py-4" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+                   <Button variant="danger" className="flex-1 py-4" onClick={executeDelete}>Delete</Button>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {showProfileModal && (
+            <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 animate-fade-in">
+               <Card className="max-w-md w-full relative">
+                  <button onClick={() => setShowProfileModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-white"><X size={20}/></button>
+                  <div className="flex items-center gap-4 mb-8 border-b border-slate-800 pb-6">
+                     <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center"><User size={24} className="text-[#9cd33b]"/></div>
+                     <div className="min-w-0 flex-1">
+                        <h3 className="text-xl font-black uppercase text-white truncate">{customUser.username}</h3>
+                        <p className="text-[#9cd33b] text-xs font-bold uppercase tracking-widest">{customUser.role}</p>
+                     </div>
+                  </div>
+                  <div className="space-y-4">
+                     <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                        <p className={tw.label}>Company</p>
+                        <p className="text-sm font-black text-slate-200 truncate">{customUser.companyName}</p>
+                     </div>
+                     <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                        <p className={tw.label}>Email</p>
+                        <p className="text-sm font-black text-slate-200 truncate">{customUser.email || 'N/A'}</p>
+                     </div>
+                  </div>
+                  <div className="pt-6 mt-6 border-t border-slate-800">
+                     <Button className="w-full" onClick={() => { setShowProfileModal(false); setActiveTab('settings'); }}>Change Password</Button>
+                  </div>
+               </Card>
+            </div>
+          )}
+
+          <div className="w-20 lg:w-64 bg-slate-900/80 backdrop-blur-2xl border-r border-slate-800 flex flex-col shrink-0 print:hidden z-30 shadow-[4px_0_24px_rgba(0,0,0,0.2)] relative">
+            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[#9cd33b]/5 to-transparent pointer-events-none"></div>
+            <div className="p-4 lg:p-6 border-b border-slate-800/50 min-w-0 flex flex-col items-center text-center relative z-10">
+              <div className="hidden lg:flex flex-col items-center w-full">
+                <h1 className={`font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase tracking-tighter break-words leading-tight w-full drop-shadow-md ${
+                  (company.name?.length || 0) > 25 ? 'text-xs' : 
+                  (company.name?.length || 0) > 15 ? 'text-sm' : 
+                  'text-lg'
+                }`}>
+                  {company.name || 'Organization'}
+                </h1>
+                <span className="text-[10px] font-['Orbitron'] text-[#9cd33b] font-black uppercase tracking-[0.3em] mt-1.5 drop-shadow-[0_0_10px_rgba(156,211,59,0.3)]">Spray Ops</span>
+                {isOnline ? (
+                   <span className="text-[8px] bg-[#9cd33b]/10 border border-[#9cd33b]/30 text-[#9cd33b] px-2.5 py-1 rounded-full font-black uppercase tracking-widest mt-3 flex items-center gap-1.5 shadow-[0_0_10px_rgba(156,211,59,0.1)]"><Activity size={10}/> Online</span>
+                ) : (
+                   <span className="text-[8px] bg-amber-500/10 border border-amber-500/30 text-amber-500 px-2.5 py-1 rounded-full font-black uppercase tracking-widest mt-3 flex items-center gap-1.5"><AlertTriangle size={10}/> Caching</span>
+                )}
+              </div>
+              <ShieldCheck className="lg:hidden mx-auto text-[#9cd33b] shrink-0" size={24} strokeWidth={2.5}/>
+            </div>
+            <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto relative z-10">
+              {tabs.map(t => {
+                const Icon = t.icon;
+                return (
+                  <button key={t.id} onClick={() => {setActiveTab(t.id); setShowFormalReport(false);}} className={`w-full flex items-center justify-center lg:justify-start p-3.5 rounded-2xl transition-all duration-300 min-w-0 group ${activeTab === t.id ? 'bg-gradient-to-r from-[#9cd33b] to-[#8ac22a] text-[#020617] shadow-[0_0_20px_rgba(156,211,59,0.3)] font-black' : 'hover:bg-slate-800/50 text-slate-400 hover:text-slate-200'}`}>
+                     <Icon size={18} className={`shrink-0 transition-transform duration-300 ${activeTab === t.id ? 'scale-110' : 'group-hover:scale-110'}`}/>
+                     <span className={`hidden lg:inline text-[11px] uppercase tracking-widest ml-4 truncate ${activeTab === t.id ? 'font-black' : 'font-bold'}`}>{t.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+            <div className="p-4 border-t border-slate-800/50 space-y-2 min-w-0 relative z-10">
+               <div className="hidden lg:flex flex-col min-w-0 mb-3 px-2">
+                 <span className="text-[10px] text-slate-300 font-black uppercase tracking-widest truncate">{customUser.username}</span>
+                 <span className="text-[9px] text-[#9cd33b] font-bold uppercase tracking-widest truncate mt-0.5 opacity-80">{customUser.role}</span>
+               </div>
+               <button onClick={() => setShowProfileModal(true)} className="w-full p-3 flex items-center justify-center lg:justify-start rounded-xl text-slate-400 hover:bg-slate-800/50 transition-all min-w-0 group">
+                  <User size={16} className="shrink-0 group-hover:text-white transition-colors"/>
+                  <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest ml-3 truncate group-hover:text-white transition-colors">My Profile</span>
+               </button>
+               <button onClick={() => {setCustomUser(null); setAuthForm({...authForm, password: ''});}} className="w-full p-3 flex items-center justify-center lg:justify-start rounded-xl text-red-500/80 hover:text-red-400 hover:bg-red-500/10 transition-all min-w-0 group">
+                  <LogOut size={16} className="shrink-0 group-hover:scale-110 transition-transform"/>
+                  <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest ml-3 truncate">Sign Out</span>
+               </button>
+            </div>
+          </div>
+          <main className="flex-1 h-full overflow-y-auto p-6 lg:p-10 relative z-20 min-w-0">
+            {activeTab === 'dashboard' && <DashboardTab fleet={company.fleet || []} company={company} customUser={customUser} logs={logs} maintRecords={maintRecords} updateFleetInfo={f => { setCompany({...company, fleet: f}); updateDoc(doc(db,'artifacts',appId,'public','data','saas_companies',customUser.companyName.toLowerCase().replace(/[^a-z0-9]/g,'-')), {fleet: f}); }} />}
+            
+            {activeTab === 'fleet' && <FleetTab company={company} setCompany={setCompany} customUser={customUser} notify={notify} />}
+            
+            {activeTab === 'settings' && <SettingsTab company={company} setCompany={setCompany} handleCompanySettingsSave={async e => { e.preventDefault(); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'saas_companies', customUser.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')), company); notify("Settings Saved", "success"); }} customUser={customUser} setCustomUser={setCustomUser} notify={notify} db={db} appId={appId} />}
+            
+            {activeTab === 'customers' && <CustomersTab items={customers} logs={logs} isEditing={customerState.isEditing} state={customerState} setState={setCustomerState} onSubmit={e => genericSubmit(e, 'customers', customerState, setCustomerState, defaultCustomerState, "Customer Saved")} onCancel={() => setCustomerState({...defaultCustomerState, isEditing: false})} onDelete={deleteItem} notify={notify} companyPilots={companyPilots} customUser={customUser} />}
+            
+            {activeTab === 'products' && <ProductsTab items={products} isEditing={productState.isEditing} state={productState} setState={setProductState} onSubmit={e => genericSubmit(e, 'products', productState, setProductState, defaultProductState, "Product Saved")} onCancel={() => setProductState({...defaultProductState, isEditing: false})} onDelete={deleteItem} />}
+            
+            {activeTab === 'maintenance' && (
+              <MaintenanceTab 
+                items={maintRecords} 
+                equipmentList={allEquipment.filter(e => e.companyName?.toLowerCase() === customUser?.companyName.toLowerCase()).sort((a,b)=>a.name.localeCompare(b.name))}
+                isEditing={maintState.isEditing} 
+                state={maintState} 
+                setState={setMaintState} 
+                equipState={equipState}
+                setEquipState={setEquipState}
+                onSubmitLog={async (e, newEquipData) => {
+                  e.preventDefault();
+                  let asset = maintState.assetId;
+                  if (newEquipData && newEquipData.name) {
+                      asset = newEquipData.name;
+                      try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'equipment'), { ...newEquipData, companyName: customUser.companyName, timestamp: new Date().toISOString() }); } catch(err) {}
+                  }
+                  const finalState = { ...maintState, assetId: asset, picUsername: customUser.username };
+                  genericSubmit(e, 'maintenance_records', finalState, setMaintState, defaultMaintState, "Log Saved");
+                }}
+                onSubmitEquip={e => genericSubmit(e, 'equipment', equipState, setEquipState, defaultEquipState, "Equipment Saved")}
+                onCancel={() => setMaintState({...defaultMaintState, isEditing: false})} 
+                onCancelEquip={() => setEquipState({...defaultEquipState, isEditing: false})}
+                onDelete={deleteItem} 
+              />
+            )}
+            
+            {activeTab === 'certifications' && <CertificationsTab items={certs} company={company} isEditing={certState.isEditing} state={certState} setState={setCertState} onSubmit={e => genericSubmit(e, 'certifications', {...certState, picUsername: customUser.username}, setCertState, defaultCertState, "Cert Saved")} onCancel={() => setCertState({...defaultCertState, isEditing: false})} onDelete={deleteItem} />}
+            
+            {activeTab === 'notam' && (
+              <NotamTab 
+                 notams={notamLogs} isEditing={notamState.isEditing} state={notamState} setState={setNotamState} 
+                 derived={{ utcStart: computeUtcStart() }} 
+                 generate={generateNotamScript} 
+                 onSubmit={handleNotamSubmit} 
+                 onCancel={() => setNotamState({...defaultNotamState, isEditing: false})} 
+                 onDelete={deleteItem} 
+                 notify={notify} 
+                 company={company} 
+                 certs={certs} 
+              />
+            )}
+            
+            {activeTab === 'faa-report' && <FaaReportTab company={company} fleet={company.fleet || []} certs={certs} monthlyReport={faaReportData} reportMonth={reportMonth} setReportMonth={setReportMonth} showFormalReport={showFormalReport} setShowFormalReport={setShowFormalReport} notify={notify} faaReports={faaReports} onDelete={deleteItem} />}
+            
+            {activeTab === 'schedule' && (
+              <ScheduleTab 
+                workOrders={workOrders} 
+                isEditing={workOrderState.isEditing} 
+                state={workOrderState} 
+                setState={setWorkOrderState} 
+                fleet={company.fleet || []} 
+                onSubmit={handleScheduleSubmit} 
+                onCancel={() => setWorkOrderState({...defaultWorkOrderState, isEditing: false})} 
+                customers={customers} 
+                products={products} 
+                deleteItem={deleteItem} 
+                customUser={customUser} 
+                getStatusColor={getStatusColor} 
+                notify={notify} 
+                onLogMission={handleLogMissionFromSchedule} 
+                handleDrop={handleScheduleDrop}
+                handleDropToBacklog={async (e) => { 
+                   e.preventDefault(); 
+                   const id=e.dataTransfer.getData('text/plain'); 
+                   if(!id) return; 
+                   await updateDoc(doc(db,'artifacts',appId,'public','data','work_orders',id),{date:'',isScheduled:false,status:'Pending'}); notify("Moved to Backlog", "info"); 
+                }} 
+              />
+            )}
+            
+            {activeTab === 'dispatch' && (
+              <DispatcherOrdersTab 
+                workOrders={workOrders.filter(w => w.creator === customUser.username)}
+                isEditing={workOrderState.isEditing} state={workOrderState} setState={setWorkOrderState}
+                onSubmit={handleDispatcherSubmit}
+                onCancel={() => setWorkOrderState({...defaultWorkOrderState, isEditing: false})} customers={customers} products={products}
+                deleteItem={deleteItem} customUser={customUser} getStatusColor={getStatusColor} notify={notify}
+              />
+            )}
+            
+            {activeTab === 'smart-weather' && (
+               <WeatherRoutingTab workOrders={workOrders} notify={notify} />
+            )}
+            
+            {activeTab === 'log' && (
+              <MissionLogTab 
+                logs={logs} 
+                fleet={company.fleet || []} 
+                customers={customers} 
+                products={products} 
+                crops={crops} 
+                isEditing={logState.isEditing} 
+                state={logState} 
+                setState={setLogState} 
+                notify={notify} 
+                notams={notamLogs}
+                onSubmit={handleLogSubmit} 
+                onCancel={() => setLogState({...defaultLogState, isEditing: false})} 
+                onDelete={deleteItem} 
+                kmlRef={kmlInputRef} 
+                handleKml={(e) => { 
+                   const file = e.target.files[0]; 
+                   if (!file) return; 
+                   const r = new FileReader(); 
+                   r.onload = (ev) => setLogState(p => ({...p, kmlData: ev.target.result, kmlFileName: file.name})); 
+                   r.readAsText(file); 
+                }} 
+              />
+            )}
+          </main>
+        </div>
+      );
+    };
+
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
