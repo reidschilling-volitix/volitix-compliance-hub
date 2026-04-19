@@ -55,6 +55,7 @@ const Dashboard = ({ fleet = [], company = {}, customUser = {}, logs = [], maint
 
   // --- KPIs ---
   const totalAcres = useMemo(() => logs.reduce((sum, l) => sum + (parseFloat(l.treatedAcreage) || parseFloat(l.totalAcreage) || 0), 0), [logs]);
+  const totalAcresDisplay = Number(totalAcres).toFixed(2);
   const totalFlightHours = useMemo(() => logs.reduce((sum, l) => {
     const mins = parseFloat(l.flightTimeMinutes || 0);
     if (!isNaN(mins) && mins > 0) return sum + mins / 60;
@@ -179,7 +180,7 @@ const Dashboard = ({ fleet = [], company = {}, customUser = {}, logs = [], maint
         </Card>
         <Card>
           <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><MapPin size={12} className="text-amber-400" /> Acres Treated</p>
-          <p className="text-4xl font-black text-amber-400 mt-3">{totalAcres.toLocaleString()}</p>
+          <p className="text-4xl font-black text-amber-400 mt-3">{totalAcresDisplay}</p>
         </Card>
         <Card>
           <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><User size={12} className="text-purple-400" /> Clients Served</p>
@@ -220,7 +221,7 @@ const Dashboard = ({ fleet = [], company = {}, customUser = {}, logs = [], maint
         const charts = [
           { label: 'Missions / Month', field: 'missions', color: '#9cd33b', fmt: (v) => String(Math.round(v)) },
           { label: 'Flight Hours / Month', field: 'hours', color: '#60a5fa', fmt: (v) => v.toFixed(1) },
-          { label: 'Acres Treated / Month', field: 'acres', color: '#fbbf24', fmt: (v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v)) },
+          { label: 'Acres Treated / Month', field: 'acres', color: '#fbbf24', fmt: (v) => Number(v).toFixed(2) },
         ];
         return (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

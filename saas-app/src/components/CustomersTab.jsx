@@ -36,7 +36,7 @@ const CustomersTab = ({
     const totalAcres = customerLogs.reduce((a, l) => a + (parseFloat(l.treatedAcreage) || parseFloat(l.totalAcreage) || 0), 0);
     const chemicals = [...new Set(customerLogs.map(l => l.chemical).filter(Boolean))];
     const rows = customerLogs.map((l, idx) =>
-      `<tr style="background:${idx % 2 === 0 ? '#f9fafb' : '#e5e7eb'}"><td style="padding:10px 8px;border:1px solid #d1d5db;font-size:14px;line-height:1.5">${l.date || ''}</td><td style="padding:10px 8px;border:1px solid #d1d5db;font-size:14px;line-height:1.5">${(l.selectedAircraft || []).join(', ')}</td><td style="padding:10px 8px;border:1px solid #d1d5db;font-size:14px;line-height:1.5">${l.chemical || ''}</td><td style="padding:10px 8px;border:1px solid #d1d5db;font-size:14px;line-height:1.5">${l.treatedAcreage || l.totalAcreage || ''} ac</td><td style="padding:10px 8px;border:1px solid #d1d5db;font-size:14px;line-height:1.5">${l.locationName || ''}</td></tr>`
+      `<tr style="background:${idx % 2 === 0 ? '#f9fafb' : '#e5e7eb'}"><td style="padding:10px 8px;border:1px solid #d1d5db;font-size:14px;line-height:1.5">${l.date || ''}</td><td style="padding:10px 8px;border:1px solid #d1d5db;font-size:14px;line-height:1.5">${(l.selectedAircraft || []).join(', ')}</td><td style="padding:10px 8px;border:1px solid #d1d5db;font-size:14px;line-height:1.5">${l.chemical || ''}</td><td style="padding:10px 8px;border:1px solid #d1d5db;font-size:14px;line-height:1.5">${Number(l.treatedAcreage || l.totalAcreage || 0).toFixed(2)} ac</td><td style="padding:10px 8px;border:1px solid #d1d5db;font-size:14px;line-height:1.5">${l.locationName || ''}</td></tr>`
     ).join('');
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:900px;margin:auto;background:#fff;padding:32px 24px 24px 24px;border-radius:16px;box-shadow:0 2px 12px #0001">
@@ -66,7 +66,7 @@ const CustomersTab = ({
         </table>
         <div style="font-size:1.1em;margin-bottom:8px">
           <strong>Total Missions:</strong> ${customerLogs.length} &nbsp; | &nbsp;
-          <strong>Total Acres:</strong> ${totalAcres.toFixed(1)} &nbsp; | &nbsp;
+          <strong>Total Acres:</strong> ${Number(totalAcres).toFixed(2)} &nbsp; | &nbsp;
           <strong>Products:</strong> ${chemicals.join(', ') || '—'}
         </div>
         <div style="color:#6b7280;font-size:12px;margin-top:32px;text-align:right">Generated ${new Date().toLocaleDateString()}</div>

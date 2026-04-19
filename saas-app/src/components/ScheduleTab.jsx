@@ -556,7 +556,7 @@ const StatsRow = ({ stats }) => (
     </Card>
     <Card className="p-4">
       <p className="text-[9px] uppercase tracking-widest text-slate-400">Scheduled Acres</p>
-      <p className="text-3xl font-black text-slate-200">{stats.schedAcres}</p>
+      <p className="text-3xl font-black text-slate-200">{Number(stats.schedAcres).toFixed(2)}</p>
     </Card>
   </div>
 );
@@ -768,7 +768,7 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
 
       if (!isNaN(lat) && !isNaN(lon)) {
         const marker = L.marker([lat, lon]);
-        marker.bindPopup(`<div style="font-size:12px;font-weight:800">${job?.title || job?.customer || 'Work Order'}</div><div style="font-size:10px;opacity:0.7">${job?.chemical || ''} · ${job?.acres || '?'} ac</div>`);
+        marker.bindPopup(`<div style=\"font-size:12px;font-weight:800\">${job?.title || job?.customer || 'Work Order'}</div><div style=\"font-size:10px;opacity:0.7\">${job?.chemical || ''} · ${Number(job?.acres).toFixed(2) || '?'} ac</div>`);
         marker.addTo(layers);
         bounds.push([lat, lon]);
       }
@@ -841,7 +841,7 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
                         <span className="font-black uppercase truncate mb-1 block">{String(job.title || job.customer)}</span>
                         <button className="text-slate-400 hover:text-white" type="button"><ClipboardCheck size={12} /></button>
                       </div>
-                      <div className="font-bold opacity-80 font-mono truncate block">{String(job.acres)} AC</div>
+                      <div className="font-bold opacity-80 font-mono truncate block">{Number(job.acres).toFixed(2)} AC</div>
                       <WeatherBadge date={job.date} />
                     </div>
                   ))}
@@ -882,7 +882,7 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
                     <GripVertical size={14} className="text-slate-600 shrink-0" />
                   </div>
                   <p className="text-xs font-bold text-slate-400 truncate">{String(job.customer)}</p>
-                  <p className="text-[9px] text-slate-500 font-mono mt-1 truncate">{String(job.acres)} AC {job.appRate ? `| ${job.appRate} GPA` : ''}</p>
+                  <p className="text-[9px] text-slate-500 font-mono mt-1 truncate">{Number(job.acres).toFixed(2)} AC {job.appRate ? `| ${job.appRate} GPA` : ''}</p>
                   <div className="flex justify-end gap-2 mt-2">
                     <button onClick={() => startEditing(job)} className={tw.actionBtnEdit}><ClipboardCheck size={12} /></button>
                     <button onClick={() => handleDelete(job.id)} className={tw.actionBtnDel}><GripVertical size={12} /></button>
@@ -914,7 +914,7 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
                 <button onClick={(e) => { e.stopPropagation(); startEditing(job); }} className={tw.actionBtnEdit}><GripVertical size={14} /></button>
               </div>
               <p className="text-[9px] text-slate-500 font-mono mt-1 bg-slate-900 p-2 rounded-lg inline-block truncate max-w-full">{String(job.finalLat)}, {String(job.finalLon)}</p>
-              <p className="text-[10px] text-slate-400 font-bold uppercase mt-3 tracking-widest truncate">{String(job.date || 'Backlog')} | {String(job.acres)} AC {job.appRate ? `| ${job.appRate} GPA` : ''}</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase mt-3 tracking-widest truncate">{String(job.date || 'Backlog')} | {Number(job.acres).toFixed(2)} AC {job.appRate ? `| ${job.appRate} GPA` : ''}</p>
             </div>
           ))}
           {workOrders.filter((w) => w.finalLat && w.finalLon).length === 0 && (

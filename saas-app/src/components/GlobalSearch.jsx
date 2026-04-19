@@ -56,7 +56,7 @@ const GlobalSearch = ({ open, onClose, customers = [], fleet = [], logs = [], wo
 
     logs.forEach((l) => {
       if (match(l.customer) || match(l.locationName) || match(l.chemical) || match(l.date)) {
-        items.push({ cat: 'logs', title: `${l.date} — ${l.customer || 'Unknown'}`, sub: [l.locationName, l.chemical, `${l.treatedAcreage || l.totalAcreage || '?'} ac`].filter(Boolean).join(' • '), tab: 'log' });
+      items.push({ cat: 'logs', title: `${l.date} — ${l.customer || 'Unknown'}`, sub: [l.locationName, l.chemical, `${Number(l.treatedAcreage || l.totalAcreage || 0).toFixed(2)} ac`].filter(Boolean).join(' • '), tab: 'log' });
       }
     });
 

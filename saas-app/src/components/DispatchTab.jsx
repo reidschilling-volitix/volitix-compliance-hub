@@ -46,7 +46,7 @@ const DispatchTab = ({ workOrders, setWorkOrders, customers, products, notify, c
     const reader = new FileReader();
     reader.onload = (ev) => {
       setState((prev) => ({ ...prev, kmlData: ev.target?.result || null, kmlFileName: file.name }));
-      notify('Boundary file attached to dispatch order.', 'success');
+      notify(`Boundary file attached to dispatch order (${Number(state.acres).toFixed(2)} acres).`, 'success');
     };
     reader.readAsText(file);
   };
@@ -314,7 +314,7 @@ const DispatchTab = ({ workOrders, setWorkOrders, customers, products, notify, c
                 <tr key={job.id} className={tw.tr}>
                   <td className={tw.td}>
                     <p className="font-black text-slate-200 text-sm break-words">{String(job.title || 'Untitled Job')}</p>
-                    <p className="text-[10px] text-slate-400 font-mono mt-1 uppercase break-words">{String(job.acres)} AC</p>
+                    <p className="text-[10px] text-slate-400 font-mono mt-1 uppercase break-words">{Number(job.acres).toFixed(2)} AC</p>
                   </td>
                   <td className={tw.td}>
                     <p className="text-sm text-slate-200 font-black uppercase break-words">{String(job.customer)}</p>
