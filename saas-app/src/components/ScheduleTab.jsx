@@ -1053,49 +1053,48 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
           </div>
         </div>
 
-        <Input
-          type="number"
-          label="Acreage"
-          value={state.acres}
-          onChange={(e) => {
-            const value = e.target.value;
-            const est = calculateEstimate(value, fleet.filter((f) => (state.selectedAircraft || []).includes(f.id)), state.kmlData, state.appRate);
-            setState({ ...state, acres: value, estHoursMin: est.min, estHoursMax: est.max });
-          }}
-          required
-        />
-        <Input
-          label="App Vol. (GPA)"
-          type="number"
-          step="any"
-          value={state.appRate}
-          onChange={(e) => {
-            const value = e.target.value;
-            const est = calculateEstimate(state.acres, fleet.filter((f) => (state.selectedAircraft || []).includes(f.id)), state.kmlData, value);
-            setState({ ...state, appRate: value, estHoursMin: est.min, estHoursMax: est.max });
-          }}
-          rightElement={<span className="text-[9px] text-slate-500 font-black">GPA</span>}
-        />
-
-        <div className="space-y-2 min-w-0">
-          <label className={tw.label}>Est. Time Range (Hrs)</label>
-          <div className="flex gap-2">
-            <input type="number" step="any" placeholder="Min" className={tw.input} value={state.estHoursMin} onChange={(e) => setState({ ...state, estHoursMin: e.target.value })} />
-            <input type="number" step="any" placeholder="Max" className={tw.input} value={state.estHoursMax} onChange={(e) => setState({ ...state, estHoursMax: e.target.value })} />
-          </div>
-          {state.kmlData && (() => {
-            const { shapeMultiplier, fieldCount, detail } = analyzeKmlShape(state.kmlData);
-            const mult = parseFloat(shapeMultiplier);
-            const color = mult <= 1.1 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : mult <= 1.3 ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 'text-red-400 bg-red-500/10 border-red-500/20';
-            const label = mult <= 1.1 ? 'Efficient' : mult <= 1.3 ? 'Moderate' : 'Complex';
-            return (
-              <div className={`mt-2 px-3 py-2 rounded-xl border text-[9px] font-black uppercase tracking-widest ${color}`}>
-                <span>Field Shape: {label} ({shapeMultiplier}x)</span>
-                {fieldCount > 1 && <span className="ml-2">• {fieldCount} fields</span>}
-                {detail && <p className="mt-1 text-[8px] font-bold normal-case tracking-normal opacity-70">{detail}</p>}
+        <div className="space-y-6">
+          <label className={tw.label + ' text-lg'}>Fields</label>
+          {state.fields.map((field, idx) => (
+            <div key={field.id || idx} className="border border-slate-800 rounded-2xl p-4 mb-4 bg-slate-950 relative">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-black text-xs uppercase tracking-widest text-[#9cd33b]">Field {idx + 1}</span>
+                {state.fields.length > 1 && (
+                  <button type="button" className="text-red-400 text-xs font-bold" onClick={() => setState({ ...state, fields: state.fields.filter((_, i) => i !== idx) })}>Remove</button>
+                )}
               </div>
-            );
-          })()}
+              <Input label="Acreage" type="number" value={field.acres} onChange={e => {
+                const value = e.target.value;
+                const newFields = state.fields.map((f, i) => i === idx ? { ...f, acres: value } : f);
+                setState({ ...state, fields: newFields });
+              }} required />
+              <Input label="Product" value={field.chemical} onChange={e => {
+                const value = e.target.value;
+                const newFields = state.fields.map((f, i) => i === idx ? { ...f, chemical: value } : f);
+                setState({ ...state, fields: newFields });
+              }} required />
+              <Input label="App Vol. (GPA)" type="number" step="any" value={field.appRate} onChange={e => {
+                const value = e.target.value;
+                const newFields = state.fields.map((f, i) => i === idx ? { ...f, appRate: value } : f);
+                setState({ ...state, fields: newFields });
+              }} rightElement={<span className="text-[9px] text-slate-500 font-black">GPA</span>} />
+              {/* Coordinates and KML/map input for each field */}
+              <GeoAndKmlInput
+                state={field}
+                setState={newField => {
+                  const newFields = state.fields.map((f, i) => i === idx ? { ...f, ...newField } : f);
+                  setState({ ...state, fields: newFields });
+                }}
+                notify={notify}
+                kmlRef={kmlRef}
+                workOrders={workOrders}
+              />
+            </div>
+          ))}
+          <button type="button" className="px-4 py-2 rounded-xl border border-[#9cd33b] text-[#9cd33b] font-black uppercase text-xs tracking-widest bg-slate-900 hover:bg-slate-800 transition" onClick={() => {
+            const nextId = `field-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+            setState({ ...state, fields: [...state.fields, { ...state.fields[0], id: nextId }] });
+          }}>+ Add Field</button>
         </div>
 
         <div className="md:col-span-2">
