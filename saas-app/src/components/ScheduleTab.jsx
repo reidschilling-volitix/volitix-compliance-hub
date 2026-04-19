@@ -35,8 +35,8 @@ const defaultWorkOrderState = {
   isScheduled: false,
   estHoursMin: '1.0',
   estHoursMax: '2.0',
-  recurrence: 'none',
-  recurrenceEnd: '',
+  // recurrence: 'none',
+  // recurrenceEnd: '',
 };
 
 const getStatusColor = (status) => {
@@ -659,53 +659,33 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
       return;
     }
 
-    const savedWorkOrder = state.id ? { ...state } : { ...state, id: `wo-${Date.now()}` };
+    // Split into separate jobs for each field
+    const jobs = (state.fields || []).map((field, idx) => {
+      const id = state.id ? `${state.id}-f${idx}` : `wo-${Date.now()}-f${idx}`;
+      return {
+        ...state,
+        ...field,
+        id,
+        fieldIdx: idx,
+        fields: undefined, // Remove fields array from each job
+        title: state.title + (state.fields.length > 1 ? ` - Field ${idx + 1}` : ''),
+        status: state.date ? 'Scheduled' : 'Pending Dispatch',
+        isScheduled: !!state.date,
+      };
+    });
 
     if (state.id) {
-      setWorkOrders((prev) => prev.map((item) => (item.id === state.id ? savedWorkOrder : item)));
+      setWorkOrders((prev) => [
+        ...prev.filter((item) => !item.id.startsWith(state.id)),
+        ...jobs
+      ]);
     } else {
-      setWorkOrders((prev) => [savedWorkOrder, ...prev]);
+      setWorkOrders((prev) => [...jobs, ...prev]);
     }
-
-    // Generate recurring copies
-    if (!state.id && state.recurrence && state.recurrence !== 'none' && state.date) {
-      const INTERVAL = { weekly: 7, biweekly: 14, monthly: 30 };
-      const days = INTERVAL[state.recurrence] || 0;
-      if (days > 0) {
-        const endDate = state.recurrenceEnd ? new Date(state.recurrenceEnd) : new Date(new Date(state.date).getTime() + days * 4 * 86400000);
-        let cursor = new Date(state.date);
-        const copies = [];
-        for (let i = 0; i < 52; i++) {
-          cursor = new Date(cursor.getTime() + days * 86400000);
-          if (cursor > endDate) break;
-          copies.push({
-            ...savedWorkOrder,
-            id: `wo-${Date.now()}-r${i}`,
-            date: cursor.toISOString().slice(0, 10),
-            isScheduled: true,
-            status: 'Scheduled',
-            recurrence: 'none',
-            recurrenceEnd: '',
-          });
-        }
-        if (copies.length > 0) {
-          setWorkOrders((prev) => [...copies, ...prev]);
-          notify(`${copies.length} recurring order${copies.length !== 1 ? 's' : ''} created.`, 'success');
-        }
-      }
-    }
-
-    const shouldLog = savedWorkOrder.status === 'Completed' && !wasCompleted;
 
     setState(defaultWorkOrderState);
     setIsEditing(false);
     setWasCompleted(false);
-
-    if (savedWorkOrder.status === 'Completed' && wasCompleted) {
-      notify('Mission log already created for this work order.', 'error');
-    } else if (shouldLog && typeof onLogMission === 'function') {
-      try { onLogMission(savedWorkOrder); } catch (err) { notify(`Log mission error: ${err.message}`, 'error'); }
-    }
 
     notify('Work order saved.', 'success');
   };
@@ -910,7 +890,7 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
           <h3 className="font-black uppercase tracking-widest text-slate-100 text-xs truncate">Mapped Locations</h3>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-          {workOrders.filter((w) => w.finalLat && w.finalLon).map((job) => (
+          {workOrders.filter((w) => (w.finalLat && w.finalLon) || w.kmlData).map((job) => (
             <div
               key={job.id}
               onClick={() => setSelectedMapJob(job)}
@@ -920,11 +900,11 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
                 <p className="text-[11px] font-black text-slate-200 uppercase truncate block">{String(job.title || job.customer)}</p>
                 <button onClick={(e) => { e.stopPropagation(); startEditing(job); }} className={tw.actionBtnEdit}><GripVertical size={14} /></button>
               </div>
-              <p className="text-[9px] text-slate-500 font-mono mt-1 bg-slate-900 p-2 rounded-lg inline-block truncate max-w-full">{String(job.finalLat)}, {String(job.finalLon)}</p>
+              <p className="text-[9px] text-slate-500 font-mono mt-1 bg-slate-900 p-2 rounded-lg inline-block truncate max-w-full">{job.finalLat && job.finalLon ? `${String(job.finalLat)}, ${String(job.finalLon)}` : (job.kmlFileName || 'Drawn Boundary')}</p>
               <p className="text-[10px] text-slate-400 font-bold uppercase mt-3 tracking-widest truncate">{String(job.date || 'Backlog')} | {Number(job.acres).toFixed(2)} AC {job.appRate ? `| ${job.appRate} GPA` : ''}</p>
             </div>
           ))}
-          {workOrders.filter((w) => w.finalLat && w.finalLon).length === 0 && (
+          {workOrders.filter((w) => (w.finalLat && w.finalLon) || w.kmlData).length === 0 && (
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center mt-10">No mapped work orders</p>
           )}
         </div>
@@ -1089,12 +1069,15 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
                 kmlRef={kmlRef}
                 workOrders={workOrders}
               />
+              {/* Add Field button directly under geolocation structure */}
+              {idx === (state.fields.length - 1) && (
+                <button type="button" className="mt-4 px-4 py-2 rounded-xl border border-[#9cd33b] text-[#9cd33b] font-black uppercase text-xs tracking-widest bg-slate-900 hover:bg-slate-800 transition" onClick={() => {
+                  const nextId = `field-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+                  setState({ ...state, fields: [...state.fields, { ...defaultField, id: nextId }] });
+                }}>+ Add Field</button>
+              )}
             </div>
           ))}
-          <button type="button" className="px-4 py-2 rounded-xl border border-[#9cd33b] text-[#9cd33b] font-black uppercase text-xs tracking-widest bg-slate-900 hover:bg-slate-800 transition" onClick={() => {
-            const nextId = `field-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-            setState({ ...state, fields: [...state.fields, { ...state.fields[0], id: nextId }] });
-          }}>+ Add Field</button>
         </div>
 
         <div className="md:col-span-2">
@@ -1144,12 +1127,7 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
           <option className="bg-slate-900" value="Cancelled">Cancelled</option>
         </Select>
 
-        <Select label="Recurrence" value={state.recurrence || 'none'} onChange={(e) => setState({ ...state, recurrence: e.target.value })}>
-          <option className="bg-slate-900" value="none">No Repeat</option>
-          <option className="bg-slate-900" value="weekly">Weekly</option>
-          <option className="bg-slate-900" value="biweekly">Every 2 Weeks</option>
-          <option className="bg-slate-900" value="monthly">Monthly</option>
-        </Select>
+          {/* Recurrence removed as requested */}
         {state.recurrence && state.recurrence !== 'none' && (
           <Input type="date" label="Repeat Until" value={state.recurrenceEnd || ''} onChange={(e) => setState({ ...state, recurrenceEnd: e.target.value })} />
         )}
