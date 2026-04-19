@@ -4,19 +4,11 @@ import L from 'leaflet';
 import { Button, Card, FormCard, Input, Select, TableCard, ActionButtons, TextArea, tw } from './ui/components';
 import FieldMapper from './FieldMapper';
 
-const defaultWorkOrderState = {
+const defaultField = {
   id: '',
-  title: '',
-  customer: '',
-  date: '',
   acres: '',
   chemical: '',
   appRate: '',
-  selectedAircraft: [],
-  status: 'Pending Dispatch',
-  isScheduled: false,
-  estHoursMin: '1.0',
-  estHoursMax: '2.0',
   kmlData: null,
   kmlFileName: '',
   coordType: 'Decimal',
@@ -28,6 +20,21 @@ const defaultWorkOrderState = {
   lonDMS: { d: '', m: '', s: '', dir: 'W' },
   finalLat: '',
   finalLon: '',
+};
+
+const defaultWorkOrderState = {
+  id: '',
+  title: '',
+  customer: '',
+  date: '',
+  fields: [
+    { ...defaultField, id: 'field-1' }
+  ],
+  selectedAircraft: [],
+  status: 'Pending Dispatch',
+  isScheduled: false,
+  estHoursMin: '1.0',
+  estHoursMax: '2.0',
   recurrence: 'none',
   recurrenceEnd: '',
 };
