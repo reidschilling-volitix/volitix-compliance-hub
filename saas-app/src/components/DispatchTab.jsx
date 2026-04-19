@@ -297,7 +297,10 @@ const DispatchTab = ({ workOrders, setWorkOrders, customers, products, notify, c
           <thead className={tw.thead}>
             <tr>
               <th className={tw.th}>Job Info</th>
-              <th className={tw.th}>Client / Product</th>
+              <th className={tw.th}>Client / Products</th>
+              <th className={tw.th}>Acreage</th>
+              <th className={tw.th}>App Vol (GPA)</th>
+              <th className={tw.th}>Geolocation</th>
               <th className={tw.th}>Status</th>
               <th className={`${tw.th} text-right`}>Actions</th>
             </tr>
@@ -314,11 +317,23 @@ const DispatchTab = ({ workOrders, setWorkOrders, customers, products, notify, c
                 <tr key={job.id} className={tw.tr}>
                   <td className={tw.td}>
                     <p className="font-black text-slate-200 text-sm break-words">{String(job.title || 'Untitled Job')}</p>
-                    <p className="text-[10px] text-slate-400 font-mono mt-1 uppercase break-words">{Number(job.acres).toFixed(2)} AC</p>
+                    <p className="text-[10px] text-slate-400 font-mono mt-1 uppercase break-words">{String(job.customer)}</p>
                   </td>
                   <td className={tw.td}>
-                    <p className="text-sm text-slate-200 font-black uppercase break-words">{String(job.customer)}</p>
-                    <p className="text-[10px] text-[#9cd33b] font-bold uppercase break-words">{String(job.chemical)} {job.appRate ? `| ${job.appRate} GPA` : ''}</p>
+                    {(Array.isArray(job.products) && job.products.length > 0)
+                      ? job.products.map((prod, i) => <span key={i} className="block text-[10px] text-[#9cd33b] font-bold uppercase break-words">{prod}</span>)
+                      : <span className="text-[10px] text-[#9cd33b] font-bold uppercase break-words">{String(job.chemical)}</span>}
+                  </td>
+                  <td className={tw.td}>{Number(job.acres).toFixed(2)}</td>
+                  <td className={tw.td}>{job.appRate ? `${job.appRate} GPA` : ''}</td>
+                  <td className={tw.td}>
+                    {job.finalLat && job.finalLon ? (
+                      <span className="text-[10px] text-slate-400 font-mono">{job.finalLat}, {job.finalLon}</span>
+                    ) : job.kmlFileName ? (
+                      <span className="text-[10px] text-slate-400 font-mono">{job.kmlFileName}</span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-mono">N/A</span>
+                    )}
                   </td>
                   <td className={tw.td}>
                     <div className={`inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getStatusColor(job.status)}`}>
@@ -327,7 +342,6 @@ const DispatchTab = ({ workOrders, setWorkOrders, customers, products, notify, c
                   </td>
                   <td className={`${tw.td} text-right whitespace-nowrap`}>
                     <div className="flex justify-end gap-2 items-center">
-                      {/* Edit: Dispatchers can edit only within 1 hour of creation; Managers can always edit */}
                       {(() => {
                         const isDispatcher = customUser?.role === 'Dispatcher';
                         const created = job.createdAt ? new Date(job.createdAt) : null;
@@ -340,7 +354,6 @@ const DispatchTab = ({ workOrders, setWorkOrders, customers, products, notify, c
                         }
                         return null;
                       })()}
-                      {/* Delete: Always show for all roles */}
                       <button onClick={() => handleDelete(job.id)} className={tw.actionBtnDel}><Trash2 size={16} /></button>
                     </div>
                   </td>
