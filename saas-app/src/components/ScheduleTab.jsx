@@ -1055,7 +1055,7 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
 
         <div className="space-y-6">
           <label className={tw.label + ' text-lg'}>Fields</label>
-          {state.fields.map((field, idx) => (
+          {(state.fields || []).map((field, idx) => (
             <div key={field.id || idx} className="border border-slate-800 rounded-2xl p-4 mb-4 bg-slate-950 relative">
               <div className="flex justify-between items-center mb-2">
                 <span className="font-black text-xs uppercase tracking-widest text-[#9cd33b]">Field {idx + 1}</span>
@@ -1065,24 +1065,24 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
               </div>
               <Input label="Acreage" type="number" value={field.acres} onChange={e => {
                 const value = e.target.value;
-                const newFields = state.fields.map((f, i) => i === idx ? { ...f, acres: value } : f);
+                const newFields = (state.fields || []).map((f, i) => i === idx ? { ...f, acres: value } : f);
                 setState({ ...state, fields: newFields });
               }} required />
               <Input label="Product" value={field.chemical} onChange={e => {
                 const value = e.target.value;
-                const newFields = state.fields.map((f, i) => i === idx ? { ...f, chemical: value } : f);
+                const newFields = (state.fields || []).map((f, i) => i === idx ? { ...f, chemical: value } : f);
                 setState({ ...state, fields: newFields });
               }} required />
               <Input label="App Vol. (GPA)" type="number" step="any" value={field.appRate} onChange={e => {
                 const value = e.target.value;
-                const newFields = state.fields.map((f, i) => i === idx ? { ...f, appRate: value } : f);
+                const newFields = (state.fields || []).map((f, i) => i === idx ? { ...f, appRate: value } : f);
                 setState({ ...state, fields: newFields });
               }} rightElement={<span className="text-[9px] text-slate-500 font-black">GPA</span>} />
               {/* Coordinates and KML/map input for each field */}
               <GeoAndKmlInput
                 state={field}
                 setState={newField => {
-                  const newFields = state.fields.map((f, i) => i === idx ? { ...f, ...newField } : f);
+                  const newFields = (state.fields || []).map((f, i) => i === idx ? { ...f, ...newField } : f);
                   setState({ ...state, fields: newFields });
                 }}
                 notify={notify}
