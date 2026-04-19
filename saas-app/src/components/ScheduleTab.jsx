@@ -27,9 +27,20 @@ const defaultWorkOrderState = {
   title: '',
   customer: '',
   date: '',
-  fields: [
-    { ...defaultField, id: 'field-1' }
-  ],
+  products: [],
+  acres: '',
+  appRate: '',
+  kmlData: null,
+  kmlFileName: '',
+  coordType: 'Decimal',
+  latDec: '',
+  lonDec: '',
+  latDecDir: 'N',
+  lonDecDir: 'W',
+  latDMS: { d: '', m: '', s: '', dir: 'N' },
+  lonDMS: { d: '', m: '', s: '', dir: 'W' },
+  finalLat: '',
+  finalLon: '',
   selectedAircraft: [],
   status: 'Pending Dispatch',
   isScheduled: false,
@@ -1033,52 +1044,29 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
           </div>
         </div>
 
-        <div className="space-y-6">
-          <label className={tw.label + ' text-lg'}>Fields</label>
-          {(state.fields || []).map((field, idx) => (
-            <div key={field.id || idx} className="border border-slate-800 rounded-2xl p-4 mb-4 bg-slate-950 relative">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-black text-xs uppercase tracking-widest text-[#9cd33b]">Field {idx + 1}</span>
-                {state.fields.length > 1 && (
-                  <button type="button" className="text-red-400 text-xs font-bold" onClick={() => setState({ ...state, fields: state.fields.filter((_, i) => i !== idx) })}>Remove</button>
-                )}
-              </div>
-              <Input label="Acreage" type="number" value={field.acres} onChange={e => {
-                const value = e.target.value;
-                const newFields = (state.fields || []).map((f, i) => i === idx ? { ...f, acres: value } : f);
-                setState({ ...state, fields: newFields });
-              }} required />
-              <Input label="Product" value={field.chemical} onChange={e => {
-                const value = e.target.value;
-                const newFields = (state.fields || []).map((f, i) => i === idx ? { ...f, chemical: value } : f);
-                setState({ ...state, fields: newFields });
-              }} required />
-              <Input label="App Vol. (GPA)" type="number" step="any" value={field.appRate} onChange={e => {
-                const value = e.target.value;
-                const newFields = (state.fields || []).map((f, i) => i === idx ? { ...f, appRate: value } : f);
-                setState({ ...state, fields: newFields });
-              }} rightElement={<span className="text-[9px] text-slate-500 font-black">GPA</span>} />
-              {/* Coordinates and KML/map input for each field */}
-              <GeoAndKmlInput
-                state={field}
-                setState={newField => {
-                  const newFields = (state.fields || []).map((f, i) => i === idx ? { ...f, ...newField } : f);
-                  setState({ ...state, fields: newFields });
-                }}
-                notify={notify}
-                kmlRef={kmlRef}
-                workOrders={workOrders}
-              />
-              {/* Add Field button directly under geolocation structure */}
-              {idx === (state.fields.length - 1) && (
-                <button type="button" className="mt-4 px-4 py-2 rounded-xl border border-[#9cd33b] text-[#9cd33b] font-black uppercase text-xs tracking-widest bg-slate-900 hover:bg-slate-800 transition" onClick={() => {
-                  const nextId = `field-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-                  setState({ ...state, fields: [...state.fields, { ...defaultField, id: nextId }] });
-                }}>+ Add Field</button>
-              )}
+        <Input label="Acreage" type="number" value={state.acres} onChange={e => setState({ ...state, acres: e.target.value })} required />
+        {/* Multi-product support: allow adding multiple products */}
+        <div className="space-y-2">
+          <label className={tw.label}>Products</label>
+          {(state.products || []).map((prod, idx) => (
+            <div key={idx} className="flex items-center gap-2 mb-2">
+              <Select value={prod} onChange={e => {
+                const newProducts = [...state.products];
+                newProducts[idx] = e.target.value;
+                setState({ ...state, products: newProducts });
+              }} required>
+                <option className="bg-slate-900" value="" disabled>Select Product...</option>
+                {products.map((product) => (
+                  <option className="bg-slate-900" key={product.id} value={product.name}>{product.name}</option>
+                ))}
+              </Select>
+              <button type="button" className="text-red-400 text-xs font-bold" onClick={() => setState({ ...state, products: state.products.filter((_, i) => i !== idx) })}>Remove</button>
             </div>
           ))}
+          <button type="button" className="px-4 py-2 rounded-xl border border-[#9cd33b] text-[#9cd33b] font-black uppercase text-xs tracking-widest bg-slate-900 hover:bg-slate-800 transition" onClick={() => setState({ ...state, products: [...(state.products || []), ''] })}>+ Add Product</button>
         </div>
+        <Input label="App Vol. (GPA)" type="number" step="any" value={state.appRate} onChange={e => setState({ ...state, appRate: e.target.value })} rightElement={<span className="text-[9px] text-slate-500 font-black">GPA</span>} />
+        <GeoAndKmlInput state={state} setState={setState} notify={notify} kmlRef={kmlRef} workOrders={workOrders} />
 
         <div className="md:col-span-2">
           <Select
