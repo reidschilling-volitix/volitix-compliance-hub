@@ -1,0 +1,553 @@
+@import "leaflet/dist/leaflet.css";
+@import "leaflet-draw/dist/leaflet.draw.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* Make Leaflet polygon edit vertex handles larger and easier to grab */
+.leaflet-editing-icon {
+  width: 14px !important;
+  height: 14px !important;
+  margin-left: -7px !important;
+  margin-top: -7px !important;
+  border-radius: 50% !important;
+  background: #9cd33b !important;
+  border: 2px solid #fff !important;
+  box-shadow: 0 0 6px rgba(0,0,0,0.5) !important;
+  cursor: grab !important;
+}
+.leaflet-editing-icon:active {
+  cursor: grabbing !important;
+  background: #ffb700 !important;
+  transform: scale(1.3);
+}
+/* Midpoint ghost handles */
+.leaflet-div-icon.leaflet-editing-icon {
+  opacity: 0.6;
+}
+.leaflet-div-icon.leaflet-editing-icon:hover {
+  opacity: 1;
+  background: #ffb700 !important;
+}
+
+/* Utility classes from original */
+.thead {
+  @apply bg-slate-800/60 text-slate-400 uppercase text-[9px] font-black tracking-widest border-b border-slate-800;
+}
+
+.th {
+  @apply p-6 text-left;
+}
+
+.td {
+  @apply p-6;
+}
+
+.tr {
+  @apply hover:bg-slate-800/40;
+}
+
+.label {
+  @apply text-[10px] text-slate-400 font-black uppercase pl-1 block truncate;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Inter, system-ui, sans-serif;
+  background: #01040f;
+  color: #e2e8f0;
+}
+
+#root {
+  height: 100vh;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Organic Branching Lightning Background */
+.bg-lightning-container {
+  position: fixed;
+  inset: 0;
+  background-color: #01040f;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.lightning-veins {
+  position: absolute;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='1200'%3E%3Cfilter id='lf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.055' numOctaves='5' result='n'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='n' scale='45' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Cg filter='url(%23lf)' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke='%23fef08a' opacity='0.4' stroke-width='6' filter='blur(5px)'%3E%3Cpath d='M100,-50 L120,50 L90,120 L150,250 L130,400 L180,550 L160,700 L220,850 L210,1000' /%3E%3Cpath d='M1100,150 L980,300 L1020,450 L850,600 L900,800 L750,1100' /%3E%3C/g%3E%3Cg stroke='%23fef08a' opacity='0.9' stroke-width='1.5'%3E%3Cpath d='M100,-50 L120,50 L90,120 L150,250 L130,400 L180,550 L160,700 L220,850 L210,1000' /%3E%3Cpath d='M150,250 L250,220 L320,280 L450,240' /%3E%3Cpath d='M130,400 L50,450 L-50,420' /%3E%3Cpath d='M180,550 L300,520 L380,580 L550,540 L620,600' /%3E%3Cpath d='M1100,150 L980,300 L1020,450 L850,600 L900,800 L750,1100' /%3E%3Cpath d='M980,300 L850,280 L750,320 L620,280' /%3E%3Cpath d='M850,600 L950,580 L1050,620' /%3E%3Cpath d='M900,800 L750,780 L650,820 L500,780 L400,850' /%3E%3Cpath d='M-100,700 L50,680 L120,740 L250,710 L350,760 L500,720 L650,780 L800,740 L950,800 L1100,760' /%3E%3Cpath d='M250,710 L280,600 L220,500 L300,400 L250,300' /%3E%3Cpath d='M650,780 L680,650 L620,500 L750,350' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-size: 1200px 1200px;
+  animation: slow-pulse 20s infinite ease-in-out;
+}
+
+@keyframes slow-pulse {
+  0%, 100% { opacity: 0.15; filter: brightness(0.6); }
+  50% { opacity: 0.30; filter: brightness(1.1); }
+}
+
+/* Premium Glassmorphism UI */
+.glass-card {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Custom Leaflet Map styling for dark mode */
+.leaflet-container { background: #0f172a; font-family: inherit; }
+.leaflet-bar a { background-color: #1e293b !important; color: #e2e8f0 !important; border-color: #334155 !important; }
+.leaflet-bar a:hover { background-color: #334155 !important; }
+/* Style the Leaflet layer control dropdown to match dark theme */
+.leaflet-control-layers {
+  background: rgba(15, 23, 42, 0.92) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 65, 85, 0.6) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+  color: #cbd5e1 !important;
+  font-size: 11px !important;
+}
+.leaflet-control-layers-toggle {
+  background-color: rgba(15, 23, 42, 0.9) !important;
+  border: 1px solid rgba(51, 65, 85, 0.6) !important;
+  border-radius: 8px !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+.leaflet-control-layers-expanded {
+  padding: 8px 12px !important;
+}
+.leaflet-control-layers label {
+  color: #cbd5e1 !important;
+  font-size: 11px !important;
+  margin-bottom: 2px !important;
+}
+.leaflet-control-layers-separator {
+  border-top-color: rgba(51, 65, 85, 0.5) !important;
+}
+/* Compact Leaflet zoom controls */
+.leaflet-bar { border-radius: 8px !important; overflow: hidden; border: 1px solid rgba(51,65,85,0.6) !important; }
+.leaflet-bar a { width: 30px !important; height: 30px !important; line-height: 30px !important; font-size: 16px !important; }
+/* Leaflet draw toolbar — compact */
+.leaflet-draw-toolbar a { width: 30px !important; height: 30px !important; line-height: 30px !important; }
+
+/* ===== GLOBAL SCROLLBARS — dark theme ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+}
+/* Utility for even thinner scrollbars in panels */
+.scrollbar-thin::-webkit-scrollbar { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.25); border-radius: 2px; }
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Light Theme */
+[data-theme="light"] body,
+[data-theme="light"] {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+[data-theme="light"] #root {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .bg-lightning-container {
+  background-color: #f1f5f9;
+}
+
+[data-theme="light"] .lightning-veins {
+  opacity: 0.03 !important;
+  filter: invert(1) brightness(0.5) !important;
+}
+
+[data-theme="light"] .glass-card {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Sidebar and nav */
+[data-theme="light"] aside {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Tables */
+[data-theme="light"] .thead,
+[data-theme="light"] thead {
+  background: rgba(241, 245, 249, 0.9) !important;
+  color: #475569;
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] .tr:hover,
+[data-theme="light"] tr:hover {
+  background: rgba(241, 245, 249, 0.6) !important;
+}
+
+[data-theme="light"] tbody {
+  color: #1e293b;
+}
+
+[data-theme="light"] td {
+  border-color: #e2e8f0 !important;
+}
+
+/* ========== BACKGROUNDS — dark to light ========== */
+[data-theme="light"] [class*="bg-\[\#020617\]"] { background-color: #f1f5f9 !important; }
+[data-theme="light"] [class*="bg-\[\#01040f\]"] { background-color: #f1f5f9 !important; }
+
+/* Solid backgrounds */
+[data-theme="light"] [class*="bg-slate-950"] { background-color: #f8fafc !important; }
+[data-theme="light"] [class*="bg-slate-900"] { background-color: #ffffff !important; }
+[data-theme="light"] [class*="bg-slate-800"] { background-color: #f1f5f9 !important; }
+
+/* Opacity variant backgrounds — Tailwind compiles bg-slate-950/50 etc. using --tw-bg-opacity */
+[data-theme="light"] [class*="bg-slate-950\/"] { background-color: rgba(248, 250, 252, 0.7) !important; }
+[data-theme="light"] [class*="bg-slate-900\/"] { background-color: rgba(255, 255, 255, 0.85) !important; }
+[data-theme="light"] [class*="bg-slate-800\/"] { background-color: rgba(241, 245, 249, 0.7) !important; }
+
+/* Hover backgrounds */
+[data-theme="light"] [class*="hover\:bg-slate-800"]:hover,
+[data-theme="light"] [class*="hover\:bg-slate-700"]:hover,
+[data-theme="light"] [class*="hover\:bg-slate-900"]:hover {
+  background-color: #e2e8f0 !important;
+}
+
+/* Focus backgrounds */
+[data-theme="light"] [class*="focus\:bg-slate-900"]:focus {
+  background-color: #ffffff !important;
+}
+
+/* ========== BORDERS — dark to light ========== */
+[data-theme="light"] [class*="border-slate-800"],
+[data-theme="light"] [class*="border-slate-700"],
+[data-theme="light"] [class*="border-slate-600"] {
+  border-color: #e2e8f0 !important;
+}
+
+/* Border opacity variants */
+[data-theme="light"] [class*="border-slate-800\/"],
+[data-theme="light"] [class*="border-slate-700\/"] {
+  border-color: rgba(226, 232, 240, 0.8) !important;
+}
+
+/* Hover borders */
+[data-theme="light"] [class*="hover\:border-slate-600"]:hover,
+[data-theme="light"] [class*="hover\:border-slate-500"]:hover {
+  border-color: #cbd5e1 !important;
+}
+
+/* Divide */
+[data-theme="light"] [class*="divide-slate-800"] > * + * {
+  border-color: #e2e8f0 !important;
+}
+
+/* ========== TEXT COLORS ========== */
+[data-theme="light"] [class*="text-slate-100"],
+[data-theme="light"] [class*="text-slate-200"] {
+  color: #1e293b !important;
+}
+
+[data-theme="light"] [class*="text-slate-300"] {
+  color: #334155 !important;
+}
+
+[data-theme="light"] [class*="text-slate-400"] {
+  color: #64748b !important;
+}
+
+[data-theme="light"] [class*="text-slate-500"] {
+  color: #64748b !important;
+}
+
+[data-theme="light"] [class*="text-slate-600"] {
+  color: #475569 !important;
+}
+
+[data-theme="light"] [class*="text-white"] {
+  color: #1e293b !important;
+}
+
+/* ========== GRADIENT TEXT FIX (bg-clip-text) ========== */
+/* Gradient titles (from-slate-100 to-slate-400) invisible on light bg — override to solid dark */
+[data-theme="light"] [class*="bg-clip-text"] {
+  -webkit-text-fill-color: unset !important;
+  color: #0f172a !important;
+  background: none !important;
+}
+
+/* ========== INPUTS / SELECTS / TEXTAREAS ========== */
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background: #f8fafc !important;
+  border-color: #d1d5db !important;
+  color: #1e293b !important;
+}
+
+[data-theme="light"] input:focus,
+[data-theme="light"] select:focus,
+[data-theme="light"] textarea:focus {
+  border-color: #7ab02b !important;
+  background: #ffffff !important;
+}
+
+[data-theme="light"] input:disabled,
+[data-theme="light"] select:disabled,
+[data-theme="light"] textarea:disabled {
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+[data-theme="light"] option {
+  background: #ffffff !important;
+  color: #1e293b !important;
+}
+
+/* ========== BUTTONS ========== */
+[data-theme="light"] button[class*="bg-slate-800"],
+[data-theme="light"] button[class*="bg-slate-900"],
+[data-theme="light"] button[class*="bg-slate-950"] {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] button[class*="bg-slate-800"]:hover,
+[data-theme="light"] button[class*="bg-slate-900"]:hover,
+[data-theme="light"] button[class*="bg-slate-950"]:hover {
+  background: #cbd5e1 !important;
+}
+
+/* Secondary buttons that use combined classes */
+[data-theme="light"] button[class*="bg-slate-800\/"],
+[data-theme="light"] button[class*="bg-slate-900\/"] {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] button[class*="bg-slate-800\/"]:hover,
+[data-theme="light"] button[class*="bg-slate-900\/"]:hover {
+  background: #cbd5e1 !important;
+}
+
+/* Primary green buttons — keep as-is but darken the text for contrast */
+[data-theme="light"] button[class*="bg-gradient-to-r"][class*="from-\[\#9cd33b\]"] {
+  box-shadow: 0 2px 12px rgba(156, 211, 59, 0.3) !important;
+}
+
+/* ========== GLASSMORPHISM ICON BOX — boost contrast in light mode ========== */
+[data-theme="light"] [class*="from-\[\#9cd33b\]\/20"][class*="to-\[\#9cd33b\]\/5"] {
+  background: linear-gradient(to bottom right, rgba(156, 211, 59, 0.25), rgba(156, 211, 59, 0.1)) !important;
+  border-color: rgba(122, 176, 43, 0.4) !important;
+  box-shadow: 0 0 20px rgba(156, 211, 59, 0.12) !important;
+}
+
+/* ========== SHADOWS ========== */
+[data-theme="light"] [class*="shadow-2xl"],
+[data-theme="light"] [class*="shadow-inner"] {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] [class*="shadow-xl"] {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] [class*="shadow-lg"] {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] [class*="shadow-sm"] {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* ========== CALENDAR AND SCHEDULE-SPECIFIC ========== */
+[data-theme="light"] [class*="bg-\[\#9cd33b\]\/5"] {
+  background-color: rgba(156, 211, 59, 0.08) !important;
+}
+
+/* Calendar view toggle button active state */
+[data-theme="light"] button[class*="bg-slate-800"][class*="text-white"] {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+
+/* ========== NOTIFICATION CENTER ========== */
+[data-theme="light"] [class*="bg-slate-900"][class*="border"][class*="border-slate-700"] {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* ========== STATUS BADGES AND COLORED ELEMENTS ========== */
+/* These colored elements should keep their colors in light mode but with boosted opacity */
+[data-theme="light"] [class*="bg-red-950"],
+[data-theme="light"] [class*="bg-red-950\/"] {
+  background-color: rgba(254, 226, 226, 0.6) !important;
+}
+[data-theme="light"] [class*="bg-amber-950"],
+[data-theme="light"] [class*="bg-amber-950\/"] {
+  background-color: rgba(254, 243, 199, 0.6) !important;
+}
+[data-theme="light"] [class*="bg-blue-950"],
+[data-theme="light"] [class*="bg-blue-950\/"] {
+  background-color: rgba(219, 234, 254, 0.6) !important;
+}
+[data-theme="light"] [class*="bg-emerald-500\/20"] {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+}
+[data-theme="light"] [class*="bg-blue-500\/20"] {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+[data-theme="light"] [class*="bg-amber-500\/20"] {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+}
+[data-theme="light"] [class*="bg-red-500\/20"] {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* ========== SCROLLBAR — light theme ========== */
+[data-theme="light"] ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 3px;
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+[data-theme="light"] * {
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+/* ========== LOCK SCREEN ========== */
+[data-theme="light"] [class*="bg-\[\#01040f\]"],
+[data-theme="light"] [class*="bg-\[\#020617\]"] {
+  background-color: #f1f5f9 !important;
+}
+
+/* ========== LEAFLET MAP ========== */
+[data-theme="light"] .leaflet-container {
+  background: #f8fafc;
+}
+[data-theme="light"] .leaflet-bar a {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-color: #e2e8f0 !important;
+}
+[data-theme="light"] .leaflet-bar a:hover {
+  background-color: #f1f5f9 !important;
+}
+[data-theme="light"] .leaflet-control-layers {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] .leaflet-control-layers-toggle {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: #e2e8f0 !important;
+}
+[data-theme="light"] .leaflet-control-layers label {
+  color: #334155 !important;
+}
+[data-theme="light"] .leaflet-bar {
+  border-color: #e2e8f0 !important;
+}
+
+/* ========== MOBILE BOTTOM NAV / HEADER ========== */
+[data-theme="light"] [class*="bg-slate-900\/95"] {
+  background: rgba(255, 255, 255, 0.97) !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* ========== MISC: Tooltips, context menus, dropdowns ========== */
+[data-theme="light"] [class*="bg-slate-900"][class*="rounded"] {
+  background-color: #ffffff !important;
+}
+
+/* Quick-action gradient cards on Dashboard */
+[data-theme="light"] [class*="bg-gradient-to-br"][class*="from-\[\#9cd33b\]\/20"] {
+  background: linear-gradient(to bottom right, rgba(156, 211, 59, 0.12), rgba(156, 211, 59, 0.04)) !important;
+}
+[data-theme="light"] [class*="bg-gradient-to-br"][class*="from-amber-500\/20"] {
+  background: linear-gradient(to bottom right, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.04)) !important;
+}
+[data-theme="light"] [class*="bg-gradient-to-br"][class*="from-purple-500\/20"] {
+  background: linear-gradient(to bottom right, rgba(168, 85, 247, 0.12), rgba(168, 85, 247, 0.04)) !important;
+}
+[data-theme="light"] [class*="bg-gradient-to-br"][class*="from-blue-500\/20"] {
+  background: linear-gradient(to bottom right, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.04)) !important;
+}
+
+/* Green accent text stays readable */
+[data-theme="light"] [class*="text-\[\#9cd33b\]"] {
+  color: #5a8a1a !important;
+}
+
+/* ========== SIDEBAR — active item and text ========== */
+[data-theme="light"] aside button[class*="text-slate-400"] {
+  color: #64748b !important;
+}
+[data-theme="light"] aside button:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* ========== TRIAL BANNER (blue gradient) ========== */
+[data-theme="light"] [class*="from-blue-950"] {
+  background: linear-gradient(to right, rgba(219, 234, 254, 0.8), rgba(219, 234, 254, 0.4)) !important;
+}

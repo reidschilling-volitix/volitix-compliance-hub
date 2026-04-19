@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "spray-drone-compliance-hub",
+    "sprayops": "spray-drone-compliance-hub"
+  },
+  "targets": {},
+  "etags": {}
+}

@@ -1,0 +1,5 @@
+{
+  "appId": "com.sprayops.app",
+  "appName": "sprayops",
+  "webDir": "saas-app/dist"
+}

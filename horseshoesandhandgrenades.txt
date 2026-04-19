@@ -1,0 +1,274 @@
+const NotamTab = ({ notams, isEditing, state, setState, derived, generate, onSubmit, onCancel, onDelete, notify, company, certs }) => {
+  const kmlRef = useRef(null);
+  const handleKml = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const r = new FileReader(); r.onload = (ev) => setState(p => ({...p, kmlData: ev.target.result, kmlFileName: file.name})); r.readAsText(file);
+  };
+  if (isEditing) {
+    return (
+      <FormCard title={state.id ? 'Edit NOTAM' : 'Create NOTAM'} icon={Navigation} onSubmit={onSubmit} onCancel={onCancel} submitLabel="Archive NOTAM">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+          <Input type="date" label="NOTAM Date" value={state.date} onChange={e => setState({...state, date: e.target.value})} required/>
+          <Input label="NOTAM Number" placeholder="e.g. FDC 1/2345" value={state.notamNumber} onChange={e => setState({...state, notamNumber: e.target.value})}/>
+          <Input type="time" label="Local Start Time" value={state.localStartTime} onChange={e => setState({...state, localStartTime: e.target.value})}/>
+          <Input label="Duration (Hours)" type="number" step="any" value={state.duration} onChange={e => setState({...state, duration: e.target.value})}/>
+          <Input label="Radius (NM)" type="number" step="any" value={state.radius} onChange={e => setState({...state, radius: e.target.value})} required/>
+        </div>
+        <GeoAndKmlInput notify={notify} state={state} setState={setState} kmlRef={kmlRef} handleKml={handleKml} />
+        <div className="bg-slate-950 p-6 rounded-2xl border border-[#9cd33b]/30 space-y-3">
+          <p className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest">Generated Script</p>
+          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 font-mono text-[9px] text-slate-400 break-words whitespace-pre-wrap max-h-32 overflow-y-auto">{generate()}</div>
+          <Button variant="secondary" onClick={() => copyToClipboard(generate())} className="w-full"><Paperclip size={14}/> Copy Script</Button>
+        </div>
+      </FormCard>
+    );
+  }
+  return (
+    <TableCard title="NOTAM Archive" icon={Navigation} actionLabel="NOTAM" onAction={() => setState({...defaultNotamState, isEditing: true})}>
+      <table className="w-full text-left min-w-[700px]">
+        <thead className={tw.thead}>
+          <tr><th className={tw.th}>Date / Number</th><th className={tw.th}>Location / Radius</th><th className={tw.th}>Duration</th><th className={`${tw.th} text-right`}>Actions</th></tr>
+        </thead>
+        <tbody className="divide-y divide-slate-800/40">
+          {notams.length === 0 && <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No NOTAMs archived.</td></tr>}
+          {notams.map(n => (
+            <tr key={n.id} className={tw.tr}>
+              <td className={tw.td}><p className="font-mono text-[#9cd33b] text-xs font-black break-words">{String(n.date)}</p><p className="text-[10px] text-slate-400 uppercase mt-1 tracking-widest break-words">{String(n.notamNumber || 'N/A')}</p></td>
+              <td className={tw.td}><p className="text-slate-300 font-bold text-xs break-words">{n.finalLat?.toFixed(4)}, {n.finalLon?.toFixed(4)}</p><p className="text-[9px] text-slate-500 font-mono mt-1 break-words">{String(n.radius)} NM Radius</p></td>
+              <td className={tw.td}><p className="text-blue-400 font-black text-xs break-words">{String(n.duration)} hrs</p></td>
+              <ActionButtons onEdit={() => setState({...n, isEditing: true})} onDelete={() => onDelete('notam_logs', n.id)} />
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </TableCard>
+  );
+};
+
+const MissionLogTab = ({ logs, fleet, customers, products, crops, isEditing, state, setState, notify, notams, onSubmit, onCancel, onDelete, kmlRef, handleKml }) => {
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [inlineCustomer, setInlineCustomer] = useState(false);
+  const [newCustData, setNewCustData] = useState(defaultCustomerState);
+  const [inlineProduct, setInlineProduct] = useState(false);
+  const [newProdData, setNewProdData] = useState(defaultProductState);
+
+  if (isEditing) {
+    return (
+      <FormCard title={state.id ? 'Edit Mission Log' : 'Record New Mission'} icon={FileText} onSubmit={(e) => onSubmit(e, inlineCustomer ? newCustData : null, inlineProduct ? newProdData : null)} onCancel={onCancel} submitLabel="Save Mission Log">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+          <Input type="date" label="Flight Date" value={state.date} onChange={e => setState({...state, date: e.target.value})} required/>
+          <div className="flex gap-2"><Input type="time" label="Start Time" value={state.startTime} onChange={e => setState({...state, startTime: e.target.value})}/><Input type="time" label="End Time" value={state.endTime} onChange={e => setState({...state, endTime: e.target.value})}/></div>
+          
+          <div className="space-y-2 min-w-0">
+            <Select label="Aircraft Used" value={state.selectedAircraft?.[0] || ''} onChange={e => setState({...state, selectedAircraft: e.target.value ? [e.target.value] : []})}>
+              <option value="">Select Aircraft...</option>
+              {fleet.map(d => <option className="bg-slate-900" key={d.id} value={d.id}>{String(d.id)}</option>)}
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-2 min-w-0">
+            <Select label="Customer" value={inlineCustomer ? 'ADD_NEW' : state.customer} onChange={e => { if(e.target.value === 'ADD_NEW') setInlineCustomer(true); else { setInlineCustomer(false); setState({...state, customer: e.target.value}); }}}>
+              <option value="">Select Customer...</option>
+              {customers.map(c => <option className="bg-slate-900" key={c.id} value={c.name}>{String(c.name)}</option>)}
+              <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">+ New Customer</option>
+            </Select>
+            {inlineCustomer && <InlineCustomerForm data={newCustData} setData={setNewCustData} onClose={() => setInlineCustomer(false)} />}
+          </div>
+
+          <Input label="Location / Field Name" value={state.locationName} onChange={e => setState({...state, locationName: e.target.value})}/>
+          <Input type="number" label="Total Acreage" value={state.totalAcreage} onChange={e => setState({...state, totalAcreage: e.target.value})}/>
+          <Input type="number" label="Treated Acreage" value={state.treatedAcreage} onChange={e => setState({...state, treatedAcreage: e.target.value})}/>
+
+          <Select label="Crop / What Was Treated" value={state.whatWasTreated} onChange={e => setState({...state, whatWasTreated: e.target.value})} required>
+            <option value="Corn">Corn</option><option value="Soybeans">Soybeans</option><option value="Wheat">Wheat</option><option value="Pasture">Pasture</option><option value="Rice">Rice</option><option value="ADD_NEW">+ Custom Crop</option>
+          </Select>
+          {state.whatWasTreated === 'ADD_NEW' && <Input label="Custom Crop Name" value={state.customCrop} onChange={e => setState({...state, customCrop: e.target.value})} required/>}
+
+          <Input label="Target Pest" value={state.targetPest} onChange={e => setState({...state, targetPest: e.target.value})}/>
+          <Input label="Nozzle Description" value={state.nozzleDesc} onChange={e => setState({...state, nozzleDesc: e.target.value})}/>
+          <Input label="Target Distance" value={state.targetDistance} onChange={e => setState({...state, targetDistance: e.target.value})}/>
+          <Input label="Pump Pressure (PSI)" value={state.pumpPressure} onChange={e => setState({...state, pumpPressure: e.target.value})}/>
+          <Input label="Travel Speed" value={state.travelSpeed} onChange={e => setState({...state, travelSpeed: e.target.value})}/>
+          <Select label="Speed Unit" value={state.speedUnit} onChange={e => setState({...state, speedUnit: e.target.value})}><option>mph</option><option>knots</option></Select>
+
+          <div className="flex flex-col gap-2 min-w-0 md:col-span-2">
+            <Select label="Chemical Applied" value={inlineProduct ? 'ADD_NEW' : state.chemical} onChange={e => { if(e.target.value === 'ADD_NEW') setInlineProduct(true); else { setInlineProduct(false); setState({...state, chemical: e.target.value}); }}}>
+              <option value="">Select Product...</option>
+              {products.map(p => <option className="bg-slate-900" key={p.id} value={p.name}>{String(p.name)}</option>)}
+              <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">+ New Product</option>
+            </Select>
+            {inlineProduct && <InlineProductForm data={newProdData} setData={setNewProdData} onClose={() => setInlineProduct(false)} />}
+          </div>
+
+          <Input label="Application Rate" type="number" step="any" value={state.appRate} onChange={e => setState({...state, appRate: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">oz/ac</span>}/>
+          <div className="space-y-2"><label className={tw.label}>Drift Reduction Practices</label><input type="text" className={tw.input} value={state.driftPractices} onChange={e => setState({...state, driftPractices: e.target.value})} placeholder="e.g. Buffer zones, reduced pressure, etc."/></div>
+
+          <Input label="Wind Speed" type="number" step="any" value={state.windSpeed} onChange={e => setState({...state, windSpeed: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">mph</span>}/>
+          <Select label="Wind Direction" value={state.windDirection} onChange={e => setState({...state, windDirection: e.target.value})}><option>N</option><option>NE</option><option>E</option><option>SE</option><option>S</option><option>SW</option><option>W</option><option>NW</option></Select>
+          <Input label="Temperature" type="number" step="any" value={state.temp} onChange={e => setState({...state, temp: e.target.value})}/>
+          <Select label="Temp Unit" value={state.tempUnit} onChange={e => setState({...state, tempUnit: e.target.value})}><option>F</option><option>C</option></Select>
+          <Input label="Humidity (%)" type="number" step="any" value={state.humidity} onChange={e => setState({...state, humidity: e.target.value})}/>
+
+          <div className="space-y-2 min-w-0 md:col-span-2">
+            <label className={tw.label}>Flight Time</label>
+            <div className="flex gap-2"><input type="number" step="any" placeholder="Value" className={tw.input} value={state.flightTimeValue} onChange={e => setState({...state, flightTimeValue: e.target.value})}/><select className={`${tw.input} w-auto`} value={state.flightTimeUnit} onChange={e => setState({...state, flightTimeUnit: e.target.value})}><option>Hours</option><option>Minutes</option></select></div>
+          </div>
+
+          <Select label="Incidents" value={state.incidents} onChange={e => setState({...state, incidents: e.target.value})}><option value="None">None</option><option value="Minor">Minor</option><option value="Major">Major</option><option value="Injury">Injury</option></Select>
+          {state.incidents !== 'None' && <TextArea label="Damage / Incident Description" value={state.damageDescription} onChange={e => setState({...state, damageDescription: e.target.value})}/>}
+
+          <div className="md:col-span-2"><TextArea label="Additional Notes / Observations" value={state.attachedNotam} onChange={e => setState({...state, attachedNotam: e.target.value})}/></div>
+        </div>
+        <GeoAndKmlInput notify={notify} state={state} setState={setState} kmlRef={kmlRef} handleKml={handleKml} />
+      </FormCard>
+    );
+  }
+
+  return (
+    <TableCard title="Mission Logs" icon={FileText} actionLabel="Log" onAction={() => setState({...defaultLogState, isEditing: true})}>
+      <table className="w-full text-left min-w-[800px]">
+        <thead className={tw.thead}><tr><th className={tw.th}>Date / Aircraft</th><th className={tw.th}>Location / Crop</th><th className={tw.th}>Acreage / Chemical</th><th className={`${tw.th} text-right`}>Actions</th></tr></thead>
+        <tbody className="divide-y divide-slate-800/40">
+          {logs.length === 0 && <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No missions logged.</td></tr>}
+          {logs.map(log => (
+            <tr key={log.id} className={tw.tr}>
+              <td className={tw.td}><p className="font-mono text-[#9cd33b] text-xs font-black break-words">{String(log.date)}</p><p className="text-[10px] text-slate-400 uppercase mt-1 tracking-widest break-words">{String(log.selectedAircraft?.[0] || 'N/A')}</p></td>
+              <td className={tw.td}><p className="text-slate-300 font-bold text-xs break-words">{String(log.locationName)}</p><p className="text-[10px] text-slate-500 font-mono mt-1 break-words">{String(log.whatWasTreated)}</p></td>
+              <td className={tw.td}><p className="text-blue-400 font-black text-xs break-words">{String(log.treatedAcreage || log.totalAcreage)} AC</p><p className="text-[10px] text-[#9cd33b] font-bold mt-1 break-words">{String(log.chemical)}</p></td>
+              <ActionButtons onEdit={() => setState({...log, isEditing: true})} onDelete={() => onDelete('flight_logs', log.id)} />
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </TableCard>
+  );
+};
+
+const FaaReportTab = ({ company, fleet, certs, monthlyReport, reportMonth, setReportMonth, showFormalReport, setShowFormalReport, notify, faaReports, onDelete }) => {
+  const handleGenerateFormalReport = async () => {
+    if (!monthlyReport.logs || monthlyReport.logs.length === 0) return notify("No flights logged for this month.", "error");
+    const report = {
+      month: reportMonth,
+      companyName: company.name,
+      picName: company.supervisor,
+      partNumber: company.certNo || 'N/A',
+      flightCount: monthlyReport.flightCount,
+      totalHours: monthlyReport.totalHours,
+      logs: monthlyReport.logs
+    };
+    try {
+      const db_ref = collection(db, 'artifacts', appId, 'public', 'data', 'faa_reports');
+      await addDoc(db_ref, report);
+      notify("Report filed with database.", "success");
+      setShowFormalReport(false);
+    } catch(err) {
+      notify("Error saving report.", "error");
+    }
+  };
+
+  const handlePrintReport = () => {
+    const reportContent = document.getElementById('faa-report-content');
+    if (!reportContent) return notify("Report not ready.", "error");
+    const printWindow = window.open('', '', 'width=900,height=1200');
+    printWindow.document.write(reportContent.innerHTML);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  return (
+    <div className="space-y-8 animate-fade-in min-w-0">
+      <Card className="space-y-6">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 border-b border-slate-800 pb-6">
+          <div className="flex items-center gap-4">
+            <FileBarChart size={32} className="text-[#9cd33b]"/>
+            <div className="min-w-0">
+              <h2 className="text-2xl font-black uppercase tracking-tight text-white truncate">FAA Part 137 Monthly Report</h2>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">Compliance & Flight Hours</p>
+            </div>
+          </div>
+          <Input type="month" label="Report Month" value={reportMonth} onChange={e => setReportMonth(e.target.value)} className="w-full md:w-40"/>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-4 flex flex-col gap-2"><p className={tw.label}>Total Flights</p><p className="text-4xl font-black text-[#9cd33b]">{monthlyReport.flightCount}</p></Card>
+          <Card className="p-4 flex flex-col gap-2"><p className={tw.label}>Total Hours</p><p className="text-4xl font-black text-blue-400">{monthlyReport.totalHours}</p></Card>
+          <Card className="p-4 flex flex-col gap-2"><p className={tw.label}>Acreage Treated</p><p className="text-4xl font-black text-green-400">{(monthlyReport.logs.reduce((a,l)=>a+(parseFloat(l.treatedAcreage)||parseFloat(l.totalAcreage)||0), 0)).toFixed(0)}</p></Card>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+          <div className="space-y-1">
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Organization: {String(company.name)}</p>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">PIC: {String(company.supervisor)}</p>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Part 137 Cert: {String(company.certNo || 'N/A')}</p>
+          </div>
+          <div className="flex gap-3 flex-wrap">
+            <Button onClick={() => setShowFormalReport(true)} disabled={monthlyReport.flightCount === 0}><FileText size={14}/> Review Report</Button>
+            <Button variant="secondary" onClick={handlePrintReport} disabled={monthlyReport.flightCount === 0}><Printer size={14}/> Print</Button>
+          </div>
+        </div>
+      </Card>
+
+      {showFormalReport && monthlyReport.flightCount > 0 && (
+        <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 overflow-y-auto">
+          <Card className="max-w-4xl w-full my-8 print:my-0">
+            <div id="faa-report-content" className="print:p-0 space-y-8">
+              <div className="text-center border-b border-slate-800 pb-8">
+                <h1 className="text-3xl font-black uppercase tracking-tight text-white mb-2">FAA PART 137 MONTHLY REPORT</h1>
+                <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">{new Date(reportMonth + '-01').toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 text-xs font-bold uppercase tracking-widest">
+                <div><p className="text-slate-500">Organization</p><p className="text-white font-black text-sm">{company.name}</p></div>
+                <div><p className="text-slate-500">PIC</p><p className="text-white font-black text-sm">{company.supervisor}</p></div>
+                <div><p className="text-slate-500">Part 137 Cert</p><p className="text-[#9cd33b] font-black text-sm">{company.certNo || 'N/A'}</p></div>
+                <div><p className="text-slate-500">Report Period</p><p className="text-white font-black text-sm">{reportMonth}</p></div>
+              </div>
+
+              <div className="border-t border-slate-800 pt-6">
+                <table className="w-full text-left text-xs">
+                  <thead className={tw.thead}><tr><th className={tw.th}>Date</th><th className={tw.th}>Aircraft</th><th className={tw.th}>Field</th><th className={tw.th}>Crop</th><th className={tw.th}>Acres</th><th className={tw.th}>Hours</th></tr></thead>
+                  <tbody>
+                    {monthlyReport.logs.map((log, i) => (
+                      <tr key={i} className="border-b border-slate-800"><td className={tw.td}>{log.date}</td><td className={tw.td}>{log.selectedAircraft?.[0] || 'N/A'}</td><td className={tw.td}>{log.locationName}</td><td className={tw.td}>{log.whatWasTreated}</td><td className={tw.td}>{parseFloat(log.treatedAcreage||log.totalAcreage||0).toFixed(1)}</td><td className={tw.td}>{((parseFloat(log.flightTimeMinutes)||0)/60).toFixed(2)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs space-y-2">
+                <p className="font-black uppercase text-slate-200">Summary</p>
+                <p className="text-slate-400">Total Flights: <span className="text-[#9cd33b] font-black">{monthlyReport.flightCount}</span></p>
+                <p className="text-slate-400">Total Hours: <span className="text-blue-400 font-black">{monthlyReport.totalHours}</span></p>
+                <p className="text-slate-400">Total Acres: <span className="text-green-400 font-black">{(monthlyReport.logs.reduce((a,l)=>a+(parseFloat(l.treatedAcreage)||parseFloat(l.totalAcreage)||0), 0)).toFixed(0)}</span></p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-6 border-t border-slate-800 mt-6 print:hidden">
+              <Button variant="secondary" className="flex-1" onClick={() => setShowFormalReport(false)}>Close</Button>
+              <Button onClick={handleGenerateFormalReport} className="flex-1"><FileBarChart size={14}/> File Report</Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      <TableCard title="Filed Reports" icon={FileBarChart}>
+        <table className="w-full text-left min-w-[500px]">
+          <thead className={tw.thead}><tr><th className={tw.th}>Period</th><th className={tw.th}>Flights</th><th className={tw.th}>Hours</th><th className={`${tw.th} text-right`}>Actions</th></tr></thead>
+          <tbody className="divide-y divide-slate-800/40">
+            {faaReports.length === 0 && <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No reports filed.</td></tr>}
+            {faaReports.map(r => (
+              <tr key={r.id} className={tw.tr}>
+                <td className={tw.td}><p className="font-mono text-[#9cd33b] font-black break-words">{String(r.month)}</p></td>
+                <td className={tw.td}><p className="text-slate-300 font-black text-sm break-words">{r.flightCount}</p></td>
+                <td className={tw.td}><p className="text-blue-400 font-black text-sm break-words">{r.totalHours}</p></td>
+                <td className={`${tw.td} text-right`}><button onClick={() => onDelete('faa_reports', r.id)} className={tw.actionBtnDel}><Trash2 size={16}/></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+    </div>
+  );
+};
+
+const defaultEquipState = { name: '', type: 'Drone', serialNumber: '', isEditing: false };

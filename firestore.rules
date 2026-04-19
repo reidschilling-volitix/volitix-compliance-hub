@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(appId) {
+      return /databases/$(database)/documents/artifacts/$(appId)/public/data/saas_users/$(request.auth.uid);
+    }
+
+    function hasUserProfile(appId) {
+      return isSignedIn() && exists(userPath(appId));
+    }
+
+    function tenantFromProfile(appId) {
+      return get(userPath(appId)).data.tenantId;
+    }
+
+    function roleFromProfile(appId) {
+      return get(userPath(appId)).data.role;
+    }
+
+    function isTenantDoc(appId) {
+      return hasUserProfile(appId) && resource.data.tenantId == tenantFromProfile(appId);
+    }
+
+    function isIncomingTenantDoc(appId) {
+      return hasUserProfile(appId) && request.resource.data.tenantId == tenantFromProfile(appId);
+    }
+
+    function hasRole(appId, role) {
+      return hasUserProfile(appId) && roleFromProfile(appId) == role;
+    }
+
+    function isAllowedSignupRole(role) {
+      return role in ['Pilot', 'Dispatcher', 'Manager'];
+    }
+
+    function userProfilePrivilegesUnchanged() {
+      return request.resource.data.uid == resource.data.uid &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.tenantId == resource.data.tenantId &&
+        request.resource.data.companyName == resource.data.companyName;
+    }
+
+    function subscriptionPath(appId) {
+      return /databases/$(database)/documents/artifacts/$(appId)/public/data/saas_subscriptions/$(tenantFromProfile(appId));
+    }
+
+    function includedDronesFromSubscription(appId) {
+      return exists(subscriptionPath(appId)) && get(subscriptionPath(appId)).data.includedDrones is int
+        ? get(subscriptionPath(appId)).data.includedDrones
+        : 2;
+    }
+
+    function extraDronesFromSubscription(appId) {
+      return exists(subscriptionPath(appId)) && get(subscriptionPath(appId)).data.extraDrones is int
+        ? get(subscriptionPath(appId)).data.extraDrones
+        : 0;
+    }
+
+    function fleetWithinSubscriptionLimit(appId) {
+      return request.resource.data.fleet is list &&
+        request.resource.data.fleet.size() <= (includedDronesFromSubscription(appId) + extraDronesFromSubscription(appId));
+    }
+
+    // User profile: each signed-in user can create/read/update their own profile doc.
+    // Managers can also read and delete team members' profiles.
+    match /artifacts/{appId}/public/data/saas_users/{uid} {
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.uid == uid &&
+        request.resource.data.tenantId is string &&
+        request.resource.data.companyName is string &&
+        isAllowedSignupRole(request.resource.data.role);
+      allow read: if isSignedIn() && (
+        request.auth.uid == uid ||
+        (hasRole(appId, 'Manager') && resource.data.tenantId == tenantFromProfile(appId))
+      );
+      allow update: if isSignedIn() && request.auth.uid == uid && userProfilePrivilegesUnchanged();
+      allow delete: if isSignedIn() && hasRole(appId, 'Manager') &&
+        resource.data.tenantId == tenantFromProfile(appId) &&
+        resource.data.uid != request.auth.uid;
+    }
+
+    // Tenant company profile docs.
+    match /artifacts/{appId}/public/data/saas_companies/{companyId} {
+      allow read: if isSignedIn() && (
+        !hasUserProfile(appId) ||
+        resource.data.tenantId == tenantFromProfile(appId)
+      );
+      // Allow Manager to create company doc (initial creation may have empty fleet)
+      allow create: if isSignedIn() && hasRole(appId, 'Manager') &&
+        request.resource.data.tenantId == tenantFromProfile(appId) &&
+        request.resource.data.fleet is list &&
+        request.resource.data.fleet.size() <= 2;
+      allow update: if isSignedIn() && hasRole(appId, 'Manager') && request.resource.data.tenantId == tenantFromProfile(appId) && fleetWithinSubscriptionLimit(appId);
+      allow delete: if false;
+    }
+
+    match /artifacts/{appId}/public/data/{collectionName}/{docId} {
+      allow read: if isSignedIn() && isTenantDoc(appId);
+
+      allow create: if isSignedIn() && isIncomingTenantDoc(appId);
+
+      allow update, delete: if isSignedIn() && isTenantDoc(appId) && (
+        hasRole(appId, 'Manager') ||
+        (hasRole(appId, 'Dispatcher') && collectionName in ['work_orders', 'notam_logs']) ||
+        (hasRole(appId, 'Pilot') && collectionName in ['flight_logs'])
+      );
+    }
+  }
+}

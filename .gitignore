@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+saas-app/node_modules/
+functions/node_modules/
+
+# Build outputs
+dist/
+saas-app/dist/
+
+# Environment files
+saas-app/.env
+functions/.env
+
+# Firebase logs
+firebase-debug.log
