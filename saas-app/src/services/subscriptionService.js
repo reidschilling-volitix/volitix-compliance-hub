@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { appId, db } from '../firebase.js';
+import { appId } from '../utils/config';
+import { db } from '../firebase.js';
 
 const subscriptionDocRef = (tenantId) => doc(db, 'artifacts', appId, 'public', 'data', 'saas_subscriptions', String(tenantId));
 

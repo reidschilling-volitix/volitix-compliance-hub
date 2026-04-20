@@ -4,21 +4,8 @@ import L from 'leaflet';
 import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
-// Shoelace polygon area in sq meters from [lat,lon] points
-const polygonAreaSqM = (pts) => {
-  if (pts.length < 3) return 0;
-  const avgLat = pts.reduce((s, p) => s + p[0], 0) / pts.length;
-  const mPerDegLat = 111320;
-  const mPerDegLon = 111320 * Math.cos(avgLat * Math.PI / 180);
-  const projected = pts.map(([lat, lon]) => [(lon - pts[0][1]) * mPerDegLon, (lat - pts[0][0]) * mPerDegLat]);
-  let area = 0;
-  for (let i = 0; i < projected.length; i++) {
-    const j = (i + 1) % projected.length;
-    area += projected[i][0] * projected[j][1];
-    area -= projected[j][0] * projected[i][1];
-  }
-  return Math.abs(area) / 2;
-};
+
+import { polygonAreaSqM, haversineDist } from '../utils/geometry';
 
 // Convert polygon points to KML string
 const pointsToKml = (polygonPoints) => {

@@ -8,7 +8,8 @@ import {
   updatePassword as firebaseUpdatePassword,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { appId, auth, db } from '../firebase.js';
+import { appId } from '../utils/config';
+import { auth, db } from '../firebase.js';
 
 const normalizeTenantId = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
 const ALLOWED_ROLES = ['Pilot', 'Dispatcher'];

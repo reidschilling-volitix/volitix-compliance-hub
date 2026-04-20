@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Plus, ClipboardCheck, Clock, GripVertical, MapPin, ChevronLeft, ChevronRight, LayoutDashboard, Globe, X, Download, Repeat, CloudSun, Map } from 'lucide-react';
 import L from 'leaflet';
-import { Button, Card, FormCard, Input, Select, TableCard, ActionButtons, TextArea, tw } from './ui/components';
-import FieldMapper from './FieldMapper';
+import { haversineDist, polygonAreaSqM } from '../utils/geometry';
+
 
 const defaultField = {
-  id: '',
+  id: `field-${Date.now()}-${Math.floor(Math.random()*1000)}`,
   acres: '',
-  chemical: '',
+  products: [''],
   appRate: '',
   kmlData: null,
   kmlFileName: '',
@@ -23,24 +21,13 @@ const defaultField = {
 };
 
 const defaultWorkOrderState = {
-  id: '',
+  id: `wo-${Date.now()}-${Math.floor(Math.random()*1000)}`,
   title: '',
   customer: '',
   date: '',
-  products: [],
-  acres: '',
-  appRate: '',
-  kmlData: null,
-  kmlFileName: '',
-  coordType: 'Decimal',
-  latDec: '',
-  lonDec: '',
-  latDecDir: 'N',
-  lonDecDir: 'W',
-  latDMS: { d: '', m: '', s: '', dir: 'N' },
-  lonDMS: { d: '', m: '', s: '', dir: 'W' },
-  finalLat: '',
-  finalLon: '',
+  fields: [
+    { ...defaultField, id: 'field-1' }
+  ],
   selectedAircraft: [],
   status: 'Pending Dispatch',
   isScheduled: false,
@@ -49,6 +36,12 @@ const defaultWorkOrderState = {
   // recurrence: 'none',
   // recurrenceEnd: '',
 };
+
+function ScheduleTab(props) {
+    // Backup for editing job
+    const [backupJob, setBackupJob] = useState(null);
+    // Local state for the work order form
+
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -60,44 +53,20 @@ const getStatusColor = (status) => {
       return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
     case 'Paused (Weather Hold)':
       return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-    case 'Completed':
-      return 'bg-slate-800 text-slate-300 border-slate-700';
-    case 'Cancelled':
-      return 'bg-red-500/10 text-red-400 border-red-500/20';
-    default:
-      return 'bg-slate-800/80 text-slate-300 border-slate-700';
-  }
-};
-
-// Haversine distance in meters between two [lat,lon] pairs
-const haversineDist = ([lat1, lon1], [lat2, lon2]) => {
-  const R = 6371000;
-  const toRad = (d) => d * Math.PI / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-};
-
-// Shoelace formula for polygon area in sq meters from [lat,lon] points
-const polygonAreaSqM = (pts) => {
-  if (pts.length < 3) return 0;
-  // Project to approximate meters using center latitude
-  const avgLat = pts.reduce((s, p) => s + p[0], 0) / pts.length;
-  const mPerDegLat = 111320;
-  const mPerDegLon = 111320 * Math.cos(avgLat * Math.PI / 180);
-  const projected = pts.map(([lat, lon]) => [(lon - pts[0][1]) * mPerDegLon, (lat - pts[0][0]) * mPerDegLat]);
-  let area = 0;
-  for (let i = 0; i < projected.length; i++) {
-    const j = (i + 1) % projected.length;
-    area += projected[i][0] * projected[j][1];
-    area -= projected[j][0] * projected[i][1];
-  }
-  return Math.abs(area) / 2;
-};
-
-// Analyze KML polygon shape → efficiency multiplier (1.0 = perfect rectangle, higher = less efficient)
-const analyzeKmlShape = (kml) => {
+      return {
+        id,
+        title: state.title + (state.fields.length > 1 ? ` - Field ${idx + 1}` : ''),
+        customer: state.customer,
+        date: state.date,
+        selectedAircraft: state.selectedAircraft,
+        status: state.date ? 'Scheduled' : 'Pending Dispatch',
+        isScheduled: !!state.date,
+        estHoursMin: field.estHoursMin,
+        estHoursMax: field.estHoursMax,
+        ...field,
+        fields: undefined,
+        id: field.id || `wo-${Date.now()}-f${idx}`,
+      };
   if (!kml || typeof kml !== 'string') return { shapeMultiplier: 1.0, fieldCount: 0, detail: '' };
 
   // Extract all coordinate blocks
@@ -274,7 +243,7 @@ const InlineProductForm = ({ data, setData, onClose, onSave }) => (
     <div className="grid grid-cols-1 gap-4">
       <Input label="Chemical Name" value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} required />
       <Input label="Default Rate" type="number" step="any" value={data.defaultRate} onChange={(e) => setData({ ...data, defaultRate: e.target.value })} required rightElement={<span className="text-[9px] text-slate-500 font-black">oz/ac</span>} />
-      <Input label="Current Inventory" type="number" step="any" value={data.inventory || ''} onChange={(e) => setData({ ...data, inventory: e.target.value })} rightElement={<span className="text-[9px] text-slate-500 font-black">Gal</span>} />
+        <Input label="Current Inventory" type="number" step="any" value={data.inventory || ''} onChange={(e) => setData({ ...data, inventory: e.target.value })} required rightElement={<span className="text-[9px] text-slate-500 font-black">Gal</span>} />
     </div>
     <Button onClick={onSave} className="w-full mt-2">Save Product</Button>
   </div>
@@ -577,49 +546,9 @@ const StatsRow = ({ stats }) => (
       <p className="text-3xl font-black text-slate-200">{Number(stats.schedAcres).toFixed(2)}</p>
     </Card>
   </div>
-);
+)
 
-const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, notify, onAddCustomer, onAddProduct, onLogMission }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [state, setState] = useState(defaultWorkOrderState);
-  const [inlineCustomer, setInlineCustomer] = useState(false);
-  const [inlineProduct, setInlineProduct] = useState(false);
-  const [newCustData, setNewCustData] = useState({ name: '', contactName: '', email: '', phone: '', address: '', city: '', state: '', zip: '' });
-  const [newProdData, setNewProdData] = useState({ name: '', defaultRate: '', inventory: '' });
-  const [viewMode, setViewMode] = useState('calendar');
-  const [calendarBaseDate, setCalendarBaseDate] = useState(new Date());
-  const [selectedMapJob, setSelectedMapJob] = useState(null);
-  const kmlRef = useRef(null);
-
-  // Weather forecast cache for scheduled dates
-  const [weatherCache, setWeatherCache] = useState({});
-  useEffect(() => {
-    const dates = [...new Set(workOrders.filter(w => w.isScheduled && w.date).map(w => w.date))];
-    const today = new Date().toISOString().slice(0, 10);
-    const futureDates = dates.filter(d => d >= today && !weatherCache[d]);
-    if (futureDates.length === 0) return;
-    const startDate = futureDates.sort()[0];
-    const endDate = futureDates.sort().pop();
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=32.0&longitude=-99.0&daily=wind_speed_10m_max,temperature_2m_max,precipitation_probability_max&start_date=${startDate}&end_date=${endDate}&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=America%2FChicago`)
-      .then(r => r.json())
-      .then(data => {
-        if (!data.daily) return;
-        const cache = { ...weatherCache };
-        data.daily.time.forEach((d, i) => {
-          const wind = data.daily.wind_speed_10m_max[i];
-          const temp = data.daily.temperature_2m_max[i];
-          const rain = data.daily.precipitation_probability_max[i];
-          let grade = 'green';
-          if (wind > 15 || rain > 60 || temp > 105) grade = 'red';
-          else if (wind > 10 || rain > 30 || temp > 95) grade = 'yellow';
-          cache[d] = { wind: Math.round(wind), temp: Math.round(temp), rain, grade };
-        });
-        setWeatherCache(cache);
-      })
-      .catch(() => {});
-  }, [workOrders]);
-
-  const WeatherBadge = ({ date }) => {
+const WeatherBadge = ({ date }) => {
     const wx = weatherCache[date];
     if (!wx) return null;
     const colors = { green: 'text-emerald-400', yellow: 'text-amber-400', red: 'text-red-400' };
@@ -658,8 +587,16 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
 
   const [wasCompleted, setWasCompleted] = useState(false);
 
+  // Migration logic: convert old fields to new structure with products array
   const startEditing = (order) => {
-    setState({ ...order });
+    // Backup the job being edited (if it exists in workOrders)
+    setBackupJob(order);
+    const migratedFields = (order.fields || []).map(f => {
+      if (Array.isArray(f.products)) return f;
+      if (f.chemical) return { ...f, products: [f.chemical] };
+      return { ...f, products: [''] };
+    });
+    setState({ ...order, fields: migratedFields });
     setWasCompleted(order.status === 'Completed');
     setIsEditing(true);
   };
@@ -670,26 +607,64 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
       return;
     }
 
-    // Split into separate jobs for each field
-    const jobs = (state.fields || []).map((field, idx) => {
-      const id = state.id ? `${state.id}-f${idx}` : `wo-${Date.now()}-f${idx}`;
+    // Split into separate jobs for each field, sharing only title and customer
+    let jobs = (state.fields || []).map((field, idx) => {
+      // Always generate a unique id if missing or empty
+      let id = '';
+      if (state.id && idx === 0) {
+        id = state.id;
+      } else if (state.id) {
+        id = `${state.id}-f${idx}`;
+      } else if (field.id && typeof field.id === 'string' && field.id.trim() !== '') {
+        id = field.id;
+      } else {
+        id = `wo-${Date.now()}-${Math.floor(Math.random()*10000)}-f${idx}`;
+      }
       return {
-        ...state,
         ...field,
-        id,
-        fieldIdx: idx,
-        fields: undefined, // Remove fields array from each job
         title: state.title + (state.fields.length > 1 ? ` - Field ${idx + 1}` : ''),
+        customer: state.customer,
+        date: state.date,
+        selectedAircraft: state.selectedAircraft,
         status: state.date ? 'Scheduled' : 'Pending Dispatch',
         isScheduled: !!state.date,
+        estHoursMin: field.estHoursMin,
+        estHoursMax: field.estHoursMax,
+        fields: undefined,
+        id,
       };
+    });
+    // FINAL DEFENSIVE PASS: Guarantee every job has a valid, non-empty id
+    jobs = jobs.map((job, idx) => {
+      let id = job.id;
+      if (!id || typeof id !== 'string' || id.trim() === '') {
+        id = `wo-${Date.now()}-${Math.floor(Math.random()*10000)}-final${idx}`;
+      }
+      return { ...job, id };
     });
 
     if (state.id) {
-      setWorkOrders((prev) => [
-        ...prev.filter((item) => !item.id.startsWith(state.id)),
-        ...jobs
-      ]);
+      setWorkOrders((prev) => {
+        // Remove all jobs with this id or id prefix, skip undefined/null
+        let filtered = prev.filter((item) => item && item.id && !item.id.startsWith(state.id));
+        // Add new jobs, ensuring all have valid, non-empty ids
+        const newJobs = jobs.map((job, idx) => {
+          let id = job.id;
+          if (!id || typeof id !== 'string' || id.trim() === '') {
+            id = `wo-${Date.now()}-${Math.floor(Math.random()*10000)}-u${idx}`;
+          }
+          return { ...job, id };
+        });
+        // Defensive: ensure all jobs in the final array have valid ids
+        const allJobs = [...newJobs, ...filtered].map((job, idx) => {
+          let id = job.id;
+          if (!id || typeof id !== 'string' || id.trim() === '') {
+            id = `wo-${Date.now()}-${Math.floor(Math.random()*10000)}-f${idx}`;
+          }
+          return { ...job, id };
+        });
+        return allJobs;
+      });
     } else {
       setWorkOrders((prev) => [...jobs, ...prev]);
     }
@@ -708,22 +683,41 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
 
   const handleDrop = (e, date) => {
     const id = e.dataTransfer.getData('text/plain');
-    setWorkOrders((prev) => prev.map((job) => {
-      if (job.id !== id) return job;
+    setWorkOrders((prev) => prev.map((job, idx) => {
+      if (job.id !== id) {
+        // Defensive: if job.id is missing, generate one
+        if (!job.id || typeof job.id !== 'string' || job.id.trim() === '') {
+          return { ...job, id: `wo-${Date.now()}-${Math.floor(Math.random()*10000)}-d${idx}` };
+        }
+        return job;
+      }
       return {
         ...job,
         date: date.toISOString().slice(0, 10),
         isScheduled: true,
-        status: job.status === 'Pending Dispatch' ? 'Scheduled' : job.status
+        status: job.status === 'Pending Dispatch' ? 'Scheduled' : job.status,
+        id: job.id && typeof job.id === 'string' && job.id.trim() !== '' ? job.id : `wo-${Date.now()}-${Math.floor(Math.random()*10000)}-d${idx}`
       };
     }));
   };
 
   const handleDropToBacklog = (e) => {
     const id = e.dataTransfer.getData('text/plain');
-    setWorkOrders((prev) => prev.map((job) => {
-      if (job.id !== id) return job;
-      return { ...job, date: '', isScheduled: false, status: 'Pending Dispatch' };
+    setWorkOrders((prev) => prev.map((job, idx) => {
+      if (job.id !== id) {
+        // Defensive: if job.id is missing, generate one
+        if (!job.id || typeof job.id !== 'string' || job.id.trim() === '') {
+          return { ...job, id: `wo-${Date.now()}-${Math.floor(Math.random()*10000)}-b${idx}` };
+        }
+        return job;
+      }
+      return {
+        ...job,
+        date: '',
+        isScheduled: false,
+        status: 'Pending Dispatch',
+        id: job.id && typeof job.id === 'string' && job.id.trim() !== '' ? job.id : `wo-${Date.now()}-${Math.floor(Math.random()*10000)}-b${idx}`
+      };
     }));
   };
 
@@ -964,7 +958,15 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
         if (dirty) {
           if (window.confirm('Save changes before closing?')) { handleSubmit(); return; }
         }
-        setIsEditing(false); setState(defaultWorkOrderState); setWasCompleted(false);
+        // If editing an existing job and not saving, restore it if it was removed
+        if (backupJob && backupJob.id) {
+          // Remove any jobs with the same id prefix (split jobs)
+          setWorkOrders(prev => [
+            ...prev.filter(item => !item.id.startsWith(backupJob.id)),
+            backupJob
+          ]);
+        }
+        setIsEditing(false); setState(defaultWorkOrderState); setWasCompleted(false); setBackupJob(null);
       }}
       submitLabel={state.status === 'Completed' && !wasCompleted ? 'Save & Log Mission' : 'Save Schedule'}
     >
@@ -1044,67 +1046,96 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
           </div>
         </div>
 
-        <Input label="Acreage" type="number" value={state.acres} onChange={e => setState({ ...state, acres: e.target.value })} required />
-        {/* Multi-product support: allow adding multiple products */}
-        <div className="space-y-2">
-          <label className={tw.label}>Products</label>
-          {(state.products || []).map((prod, idx) => (
-            <div key={idx} className="flex items-center gap-2 mb-2">
-              <Select value={prod} onChange={e => {
-                const newProducts = [...state.products];
-                newProducts[idx] = e.target.value;
-                setState({ ...state, products: newProducts });
-              }} required>
-                <option className="bg-slate-900" value="" disabled>Select Product...</option>
-                {products.map((product) => (
-                  <option className="bg-slate-900" key={product.id} value={product.name}>{product.name}</option>
-                ))}
-              </Select>
-              <button type="button" className="text-red-400 text-xs font-bold" onClick={() => setState({ ...state, products: state.products.filter((_, i) => i !== idx) })}>Remove</button>
+        <div className="col-span-full w-full">
+          <label className={tw.label + ' text-lg'}>Fields</label>
+          {(state.fields || []).map((field, idx) => (
+            <div key={field.id || idx} className="mb-8 border-b border-slate-800 pb-8 w-full">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-black text-xs uppercase tracking-widest text-[#9cd33b]">Field {idx + 1}</span>
+                {state.fields.length > 1 && (
+                  <button type="button" className="ml-2 px-2 py-1 rounded bg-red-900 text-red-300 text-xs font-bold" onClick={() => setState({ ...state, fields: state.fields.filter((_, i) => i !== idx) })}>Remove Field</button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                <Input label="Acreage" type="number" value={field.acres} onChange={e => {
+                  const value = e.target.value;
+                  const newFields = (state.fields || []).map((f, i) => i === idx ? { ...f, acres: value } : f);
+                  setState({ ...state, fields: newFields });
+                }} required />
+                <div className="flex flex-col gap-2 col-span-1">
+                  <label className="text-xs font-bold text-slate-400">Products</label>
+                  {(field.products || []).map((productName, pIdx) => (
+                    <div key={pIdx} className="flex gap-2 items-center mb-1">
+                      <Select
+                        label={pIdx === 0 ? undefined : ''}
+                        value={productName}
+                        onChange={e => {
+                          const value = e.target.value;
+                          const newFields = (state.fields || []).map((f, i) => {
+                            if (i !== idx) return f;
+                            const newProducts = [...(f.products || [])];
+                            newProducts[pIdx] = value;
+                            return { ...f, products: newProducts };
+                          });
+                          setState({ ...state, fields: newFields });
+                        }}
+                        required
+                      >
+                        <option className="bg-slate-900" value="" disabled>
+                          Select Product...
+                        </option>
+
+                        {products.map((product) => (
+                          <option className="bg-slate-900" key={product.id} value={product.name}>
+                            {product.name}
+                          </option>
+                        ))}
+                      </Select>
+                      {field.products.length > 1 && (
+                        <button type="button" className="px-2 py-1 rounded bg-red-900 text-red-300 text-xs font-bold" onClick={() => {
+                          const newFields = (state.fields || []).map((f, i) => {
+                            if (i !== idx) return f;
+                            const newProducts = (f.products || []).filter((_, pi) => pi !== pIdx);
+                            return { ...f, products: newProducts };
+                          });
+                          setState({ ...state, fields: newFields });
+                        }}>Remove</button>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" className="mt-1 px-2 py-1 rounded bg-slate-800 text-[#9cd33b] text-xs font-bold" onClick={() => {
+                    const newFields = (state.fields || []).map((f, i) => {
+                      if (i !== idx) return f;
+                      return { ...f, products: [...(f.products || []), ''] };
+                    });
+                    setState({ ...state, fields: newFields });
+                  }}>+ Add Product</button>
+                </div>
+                <Input label="App Vol. (GPA)" type="number" step="any" value={field.appRate} onChange={e => {
+                  const value = e.target.value;
+                  const newFields = (state.fields || []).map((f, i) => i === idx ? { ...f, appRate: value } : f);
+                  setState({ ...state, fields: newFields });
+                }} rightElement={<span className="text-[9px] text-slate-500 font-black">GPA</span>} />
+              </div>
+              <GeoAndKmlInput
+                state={field}
+                setState={newField => {
+                  const newFields = (state.fields || []).map((f, i) => i === idx ? { ...f, ...newField } : f);
+                  setState({ ...state, fields: newFields });
+                }}
+                notify={notify}
+                kmlRef={kmlRef}
+                workOrders={workOrders}
+              />
             </div>
           ))}
-          <button type="button" className="px-4 py-2 rounded-xl border border-[#9cd33b] text-[#9cd33b] font-black uppercase text-xs tracking-widest bg-slate-900 hover:bg-slate-800 transition" onClick={() => setState({ ...state, products: [...(state.products || []), ''] })}>+ Add Product</button>
-        </div>
-        <Input label="App Vol. (GPA)" type="number" step="any" value={state.appRate} onChange={e => setState({ ...state, appRate: e.target.value })} rightElement={<span className="text-[9px] text-slate-500 font-black">GPA</span>} />
-        <GeoAndKmlInput state={state} setState={setState} notify={notify} kmlRef={kmlRef} workOrders={workOrders} />
-
-        <div className="md:col-span-2">
-          <Select
-            label="Chemical / Product"
-            value={inlineProduct ? 'ADD_NEW' : (state.chemical || '')}
-            onChange={(e) => {
-              if (e.target.value === 'ADD_NEW') {
-                setInlineProduct(true);
-              } else {
-                setInlineProduct(false);
-                setState({ ...state, chemical: e.target.value });
-              }
-            }}
-            required
-          >
-            <option className="bg-slate-900" value="" disabled>
-              Select Product...
-            </option>
-            {products.map((product) => (
-              <option className="bg-slate-900" key={product.id} value={product.name}>
-                {product.name}
-              </option>
-            ))}
-            <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">
-              + Create New Product
-            </option>
-          </Select>
-          {inlineProduct && <InlineProductForm data={newProdData} setData={setNewProdData} onClose={() => setInlineProduct(false)} onSave={() => {
-            if (!newProdData.name) { notify('Product name is required.', 'error'); return; }
-            const saved = onAddProduct(newProdData);
-            setState({ ...state, chemical: saved.name });
-            setNewProdData({ name: '', defaultRate: '', inventory: '' });
-            setInlineProduct(false);
-            notify('Product added.', 'success');
-          }} />}
+          <button type="button" className="mt-2 px-4 py-2 rounded-xl border border-[#9cd33b] text-[#9cd33b] font-black uppercase text-xs tracking-widest bg-slate-900 hover:bg-slate-800 transition w-full" onClick={() => {
+            const nextId = `field-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+            setState({ ...state, fields: [...state.fields, { ...defaultField, id: nextId }] });
+          }}>Add another field</button>
         </div>
 
-        <GeoAndKmlInput state={state} setState={setState} notify={notify} kmlRef={kmlRef} workOrders={workOrders} />
+        {/* Product and geolocation removed from main form; now only per-field */}
 
         <Select label="Job Status" value={state.status} onChange={(e) => setState({ ...state, status: e.target.value })}>
           <option className="bg-slate-900" value="Pending Dispatch">Pending Dispatch</option>
@@ -1115,7 +1146,7 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
           <option className="bg-slate-900" value="Cancelled">Cancelled</option>
         </Select>
 
-          {/* Recurrence removed as requested */}
+        {/* Recurrence removed as requested */}
         {state.recurrence && state.recurrence !== 'none' && (
           <Input type="date" label="Repeat Until" value={state.recurrenceEnd || ''} onChange={(e) => setState({ ...state, recurrenceEnd: e.target.value })} />
         )}
@@ -1129,7 +1160,7 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
             <CalendarDays size={28} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-100 to-slate-400 truncate">Smart Weather Routing</h2>
+            <h2 className="text-xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-100 to-slate-400 truncate">Schedule</h2>
             <p className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest mt-1 truncate">Manage Database Records</p>
           </div>
         </div>
@@ -1148,6 +1179,5 @@ const ScheduleTab = ({ workOrders, setWorkOrders, customers, products, fleet, no
       {viewMode === 'calendar' ? renderCalendar() : renderMapView()}
     </div>
   );
-};
-
+}
 export default ScheduleTab;

@@ -22,7 +22,8 @@ import AuthPortal from './components/AuthPortal.jsx';
 import { findUserForPasswordReset, loginUser, registerUser, registerManager, resetPassword } from './services/authService.js';
 import { getOrCreateSubscription } from './services/subscriptionService.js';
 import { deleteTenantRecord, loadTenantDataset, upsertTenantRecord } from './services/tenantDataService.js';
-import { appId, auth, db } from './firebase.js';
+import { appId } from './utils/config';
+import { auth, db } from './firebase.js';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 const defaultLogState = {
@@ -322,7 +323,14 @@ function App() {
       const otherTenants = prev.filter((item) => !isTenantRecord(item));
       const next = typeof updater === 'function' ? updater(tenantPrev) : updater;
       if (!Array.isArray(next)) return prev;
-      const stamped = next.map((item) => stampTenant(item));
+      // Defensive pass: ensure every work order has a unique, non-empty id
+      const stamped = next.map((item, idx) => {
+        let id = item.id;
+        if (!id || typeof id !== 'string' || !id.trim()) {
+          id = `w-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${idx}`;
+        }
+        return stampTenant({ ...item, id });
+      });
       const prevIds = new Set(tenantPrev.map((item) => item.id));
       const nextIds = new Set(stamped.map((item) => item.id));
       stamped.forEach((item) => persistRecord('work_orders', item));

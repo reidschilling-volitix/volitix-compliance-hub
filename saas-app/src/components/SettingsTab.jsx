@@ -5,7 +5,8 @@ import { Button, FormCard, Input, Select } from './ui/components';
 import { updateProfileName, updateUserPassword } from '../services/authService.js';
 import { updateSubscription } from '../services/subscriptionService.js';
 import { openStripePortal, startStripeCheckout } from '../services/stripeBillingService.js';
-import { appId, db } from '../firebase.js';
+import { appId } from '../utils/config';
+import { db } from '../firebase.js';
 
 const TIME_ZONES = [
   { offset: -8, label: 'UTC-8 Pacific' },

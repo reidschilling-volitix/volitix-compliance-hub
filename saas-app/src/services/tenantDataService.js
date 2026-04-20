@@ -7,7 +7,8 @@ import {
   setDoc,
   where,
 } from 'firebase/firestore';
-import { appId, db } from '../firebase.js';
+import { appId } from '../utils/config';
+import { db } from '../firebase.js';
 
 const DATA_ROOT = ['artifacts', appId, 'public', 'data'];
 
