@@ -25,7 +25,10 @@ export const listByTenant = async (collectionName, tenantId) => {
 };
 
 export const upsertTenantRecord = async (collectionName, record) => {
-  if (!record?.id) throw new Error('Record id is required for upsert.');
+  if (!record?.id || (typeof record.id === 'string' && !record.id.trim())) {
+    console.error(`[upsert] Missing id for ${collectionName}:`, JSON.stringify(record, null, 2));
+    throw new Error('Record id is required for upsert.');
+  }
   const safe = stripUndefined(record);
   await setDoc(docRef(collectionName, safe.id), safe, { merge: true });
   return safe;

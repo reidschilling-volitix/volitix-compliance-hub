@@ -21,7 +21,7 @@ const defaultField = {
 };
 
 const defaultWorkOrderState = {
-  id: `wo-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+  id: '',
   title: '',
   customer: '',
   date: '',
@@ -53,20 +53,14 @@ const getStatusColor = (status) => {
       return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
     case 'Paused (Weather Hold)':
       return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-      return {
-        id,
-        title: state.title + (state.fields.length > 1 ? ` - Field ${idx + 1}` : ''),
-        customer: state.customer,
-        date: state.date,
-        selectedAircraft: state.selectedAircraft,
-        status: state.date ? 'Scheduled' : 'Pending Dispatch',
-        isScheduled: !!state.date,
-        estHoursMin: field.estHoursMin,
-        estHoursMax: field.estHoursMax,
-        ...field,
-        fields: undefined,
-        id: field.id || `wo-${Date.now()}-f${idx}`,
-      };
+    case 'Completed':
+      return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    default:
+      return 'bg-slate-800/80 text-slate-300 border-slate-700';
+  }
+};
+
+const analyzeKmlShape = (kml) => {
   if (!kml || typeof kml !== 'string') return { shapeMultiplier: 1.0, fieldCount: 0, detail: '' };
 
   // Extract all coordinate blocks
@@ -591,7 +585,30 @@ const WeatherBadge = ({ date }) => {
   const startEditing = (order) => {
     // Backup the job being edited (if it exists in workOrders)
     setBackupJob(order);
-    const migratedFields = (order.fields || []).map(f => {
+    let fields = order.fields;
+    // If no fields array, reconstruct a single field from the flat work order record
+    if (!fields || !Array.isArray(fields) || fields.length === 0) {
+      fields = [{
+        id: order.id || `field-${Date.now()}`,
+        acres: order.acres || '',
+        products: Array.isArray(order.products) ? order.products : (order.chemical ? [order.chemical] : ['']),
+        appRate: order.appRate || '',
+        kmlData: order.kmlData || null,
+        kmlFileName: order.kmlFileName || '',
+        coordType: order.coordType || 'Decimal',
+        latDec: order.latDec || '',
+        lonDec: order.lonDec || '',
+        latDecDir: order.latDecDir || 'N',
+        lonDecDir: order.lonDecDir || 'W',
+        latDMS: order.latDMS || { d: '', m: '', s: '', dir: 'N' },
+        lonDMS: order.lonDMS || { d: '', m: '', s: '', dir: 'W' },
+        finalLat: order.finalLat || '',
+        finalLon: order.finalLon || '',
+        estHoursMin: order.estHoursMin || '1.0',
+        estHoursMax: order.estHoursMax || '2.0',
+      }];
+    }
+    const migratedFields = fields.map(f => {
       if (Array.isArray(f.products)) return f;
       if (f.chemical) return { ...f, products: [f.chemical] };
       return { ...f, products: [''] };
@@ -608,17 +625,14 @@ const WeatherBadge = ({ date }) => {
     }
 
     // Split into separate jobs for each field, sharing only title and customer
+    const baseId = state.id || `wo-${Date.now()}-${Math.floor(Math.random()*10000)}`;
     let jobs = (state.fields || []).map((field, idx) => {
       // Always generate a unique id if missing or empty
       let id = '';
-      if (state.id && idx === 0) {
-        id = state.id;
-      } else if (state.id) {
-        id = `${state.id}-f${idx}`;
-      } else if (field.id && typeof field.id === 'string' && field.id.trim() !== '') {
-        id = field.id;
+      if (idx === 0) {
+        id = baseId;
       } else {
-        id = `wo-${Date.now()}-${Math.floor(Math.random()*10000)}-f${idx}`;
+        id = `${baseId}-f${idx}`;
       }
       return {
         ...field,

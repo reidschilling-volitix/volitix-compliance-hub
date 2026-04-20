@@ -393,7 +393,11 @@ function App() {
   };
 
   const persistRecord = (collectionName, record) => {
+    if (!record?.id || (typeof record.id === 'string' && !record.id.trim())) {
+      console.error(`[persistRecord] Missing id for ${collectionName}:`, record);
+    }
     upsertTenantRecord(collectionName, record).catch((err) => {
+      console.error(`[persistRecord] Sync failed for ${collectionName}:`, record, err);
       notify(`Sync failed for ${collectionName}: ${err.message}`, 'error');
     });
   };
