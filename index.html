@@ -1651,6 +1651,665 @@
       );
     };
 
+    const MissionLogTab = ({ logs, notams, fleet, customers, products, crops, isEditing, state, setState, onCancel, onSubmit, onDelete, kmlRef, handleKml, notify }) => {
+      const [inlineCustomer, setInlineCustomer] = useState(false);
+      const [newCustData, setNewCustData] = useState(defaultCustomerState);
+      const [inlineProduct, setInlineProduct] = useState(false);
+      const [newProdData, setNewProdData] = useState(defaultProductState);
+
+      const fetchWeather = async () => {
+         if (!state.date || !state.startTime) return notify("Please enter a Date and Start Time first.", "error");
+
+         let lat = parseFloat(state.latDec), lon = parseFloat(state.lonDec);
+         if (state.coordType === 'DMS') {
+             lat = (parseFloat(state.latDMS.d||0)+parseFloat(state.latDMS.m||0)/60+parseFloat(state.latDMS.s||0)/3600)*(state.latDMS.dir==='S'?-1:1);
+             lon = (parseFloat(state.lonDMS.d||0)+parseFloat(state.lonDMS.m||0)/60+parseFloat(state.lonDMS.s||0)/3600)*(state.lonDMS.dir==='W'?-1:1);
+         }
+         if (isNaN(lat) || isNaN(lon) || lat === 0 || lon === 0) return notify("Enter valid coordinates first to auto-fill weather.", "error");
+
+         notify("Fetching historical weather data...", "info");
+         try {
+             const flightDate = new Date(state.date);
+             const today = new Date();
+             const daysDiff = (today - flightDate) / (1000 * 60 * 60 * 24);
+             
+             const baseUrl = daysDiff > 90 ? 'https://archive-api.open-meteo.com/v1/archive' : 'https://api.open-meteo.com/v1/forecast';
+
+             const res = await fetch(`${baseUrl}?latitude=${lat}&longitude=${lon}&start_date=${state.date}&end_date=${state.date}&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`);
+             const data = await res.json();
+             
+             if (!data.hourly || data.hourly.temperature_2m.length === 0) throw new Error("No data");
+
+             const hour = parseInt(state.startTime.split(':')[0], 10);
+
+             const t = data.hourly.temperature_2m[hour];
+             const h = data.hourly.relative_humidity_2m[hour];
+             const ws = data.hourly.wind_speed_10m[hour];
+             let wd = data.hourly.wind_direction_10m[hour];
+
+             if (t === null || t === undefined) throw new Error("Not available for this specific hour yet");
+
+             const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+             const dirIdx = Math.round(((wd %= 360) < 0 ? wd + 360 : wd) / 45) % 8;
+
+             setState(prev => ({
+                 ...prev,
+                 temp: t,
+                 humidity: h,
+                 windSpeed: ws,
+                 windDirection: dirs[dirIdx]
+             }));
+             notify(`Weather auto-filled for ${state.date} at ${state.startTime}!`, "success");
+         } catch(err) {
+             console.error(err);
+             notify("Failed to fetch weather. Date might be too far in the future or invalid.", "error");
+         }
+      };
+
+      if (isEditing) {
+        return (
+          <FormCard title={state.id ? 'Edit Mission Record' : 'Log New Mission'} icon={Plane} onSubmit={(e) => onSubmit(e, inlineCustomer ? newCustData : null, inlineProduct ? newProdData : null)} onCancel={onCancel} submitLabel="Save To Vault">
+            <div className="space-y-12">
+              <div className="space-y-6">
+                <h3 className="text-[#9cd33b] font-black uppercase text-[10px] tracking-widest border-b border-slate-800 pb-2">Logistics & Fleet</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 min-w-0">
+                   <div className="space-y-2 lg:col-span-2 min-w-0">
+                     <label className="text-[10px] text-slate-400 font-black uppercase pl-1 block truncate">Aircraft Deployed</label>
+                     <div className="flex flex-wrap gap-2">
+                       {fleet.map((d, i) => {
+                         const droneId = d.id || `Unknown-${i}`;
+                         const isSelected = (state.selectedAircraft || []).includes(droneId);
+                         return (
+                           <button 
+                             key={i} 
+                             type="button" 
+                             onClick={() => {
+                               const cur = state.selectedAircraft || [];
+                               const newSelection = cur.includes(droneId) 
+                                 ? cur.filter(a => a !== droneId) 
+                                 : [...cur, droneId];
+                               setState({...state, selectedAircraft: newSelection});
+                             }} 
+                             className={`px-4 py-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all truncate max-w-full ${
+                               isSelected 
+                                 ? 'bg-[#9cd33b] text-[#020617] border-[#9cd33b] shadow-lg' 
+                                 : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-[#9cd33b]/50'
+                             }`}
+                           >
+                             {String(droneId)}
+                           </button>
+                         );
+                       })}
+                     </div>
+                   </div>
+                   <Input type="date" label="Date" value={state.date} onChange={e => setState({...state, date: e.target.value})} required/>
+                   <Select 
+                     label="Customer" 
+                     value={inlineCustomer ? 'ADD_NEW' : state.customer} 
+                     onChange={e => { 
+                       if(e.target.value === 'ADD_NEW') {
+                         setInlineCustomer(true); 
+                       } else { 
+                         setInlineCustomer(false); 
+                         setState({...state, customer: e.target.value}); 
+                       }
+                     }} 
+                     required
+                   >
+                      <option className="bg-slate-900" value="">Select...</option>
+                      {customers.map(c => <option className="bg-slate-900" key={c.id} value={c.name}>{String(c.name)}</option>)}
+                      <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">+ Create New Customer</option>
+                   </Select>
+
+                   {inlineCustomer && (
+                     <div className="lg:col-span-4 p-6 bg-slate-950 border border-[#9cd33b]/50 rounded-2xl space-y-4 min-w-0 mt-2">
+                       <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-2">
+                         <span className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest truncate pr-2">New Customer Profile</span>
+                         <Button variant="secondary" onClick={() => setInlineCustomer(false)} className="py-2 px-3 shrink-0"><X size={14}/></Button>
+                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <Input label="Company/Farm Name" value={newCustData.name} onChange={e => setNewCustData({...newCustData, name: e.target.value})} required/>
+                         <Input label="Contact Name" value={newCustData.contactName} onChange={e => setNewCustData({...newCustData, contactName: e.target.value})}/>
+                         <Input label="Email" type="email" value={newCustData.email} onChange={e => setNewCustData({...newCustData, email: e.target.value})}/>
+                         <Input label="Phone" value={newCustData.phone} onChange={e => setNewCustData({...newCustData, phone: e.target.value})}/>
+                         <div className="md:col-span-2"><Input label="Address" value={newCustData.address} onChange={e => setNewCustData({...newCustData, address: e.target.value})}/></div>
+                         <Input label="City" value={newCustData.city} onChange={e => setNewCustData({...newCustData, city: e.target.value})}/>
+                         <div className="flex gap-4"><div className="flex-1 min-w-0"><Input label="State" value={newCustData.state} onChange={e => setNewCustData({...newCustData, state: e.target.value})}/></div><div className="flex-1 min-w-0"><Input label="Zip" value={newCustData.zip} onChange={e => setNewCustData({...newCustData, zip: e.target.value})}/></div></div>
+                         <div className="md:col-span-2"><TextArea label="Notes" value={newCustData.notes} onChange={e => setNewCustData({...newCustData, notes: e.target.value})}/></div>
+                       </div>
+                     </div>
+                   )}
+                   
+                   <div className="space-y-2 lg:col-span-2 min-w-0">
+                     <label className="text-[10px] text-slate-400 font-black uppercase pl-1 block truncate">Flight Times</label>
+                     <div className="flex flex-col sm:flex-row gap-4">
+                       <input type="time" className="flex-1 w-full min-w-0 bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-mono text-slate-200 outline-none focus:border-[#9cd33b]" value={state.startTime} onChange={e => setState({...state, startTime: e.target.value})}/>
+                       <input type="time" className="flex-1 w-full min-w-0 bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-mono text-slate-200 outline-none focus:border-[#9cd33b]" value={state.endTime} onChange={e => setState({...state, endTime: e.target.value})}/>
+                     </div>
+                   </div>
+                   
+                   <div className="space-y-2 lg:col-span-2 min-w-0">
+                     <label className="text-[10px] text-slate-400 font-black uppercase pl-1 block truncate">Total Flight Time</label>
+                     <div className="flex gap-2">
+                       <input type="number" className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.flightTimeValue} onChange={e => setState({...state, flightTimeValue: e.target.value})} required/>
+                       <select className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.flightTimeUnit} onChange={e => setState({...state, flightTimeUnit: e.target.value})}>
+                          <option>Hours</option>
+                          <option>Minutes</option>
+                       </select>
+                     </div>
+                   </div>
+                   
+                   <div className="lg:col-span-4 bg-slate-950 p-6 rounded-3xl border border-slate-800 space-y-4 min-w-0 mt-2">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b border-slate-800 pb-4 min-w-0">
+                         <span className="text-[10px] font-black uppercase text-[#9cd33b] tracking-widest truncate">Mission Coordinates</span>
+                         <select className="bg-slate-900 border border-slate-700 text-xs font-bold text-slate-300 p-3 rounded-xl outline-none w-full sm:w-auto truncate" value={state.coordType} onChange={e => setState({...state, coordType: e.target.value})}>
+                            <option value="Decimal">Decimal Degrees</option>
+                            <option value="DMS">DMS (Deg/Min/Sec)</option>
+                         </select>
+                      </div>
+                      
+                      {state.coordType === 'Decimal' ? (
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0">
+                           <div className="space-y-2 min-w-0">
+                             <label className="text-[10px] text-slate-400 font-black uppercase pl-1 block truncate">Latitude</label>
+                             <div className="flex gap-2">
+                               <input 
+                                 type="number" 
+                                 step="any" 
+                                 className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" 
+                                 value={state.latDec} 
+                                 onChange={e => setState({...state, latDec: e.target.value})}
+                               />
+                               <select 
+                                 className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" 
+                                 value={state.latDecDir || 'N'} 
+                                 onChange={e => setState({...state, latDecDir: e.target.value})}
+                               >
+                                 <option value="N">N</option>
+                                 <option value="S">S</option>
+                               </select>
+                             </div>
+                           </div>
+                           <div className="space-y-2 min-w-0">
+                             <label className="text-[10px] text-slate-400 font-black uppercase pl-1 block truncate">Longitude</label>
+                             <div className="flex gap-2">
+                               <input 
+                                 type="number" 
+                                 step="any" 
+                                 className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" 
+                                 value={state.lonDec} 
+                                 onChange={e => setState({...state, lonDec: e.target.value})}
+                               />
+                               <select 
+                                 className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" 
+                                 value={state.lonDecDir || 'W'} 
+                                 onChange={e => setState({...state, lonDecDir: e.target.value})}
+                               >
+                                 <option value="W">W</option>
+                                 <option value="E">E</option>
+                               </select>
+                             </div>
+                           </div>
+                         </div>
+                      ) : (
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 min-w-0">
+                            <div className="space-y-2 min-w-0">
+                               <label className="text-[10px] text-slate-400 font-black uppercase truncate block">Latitude (D/M/S)</label>
+                               <div className="grid grid-cols-4 gap-2">
+                                 <input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Deg" value={state.latDMS.d} onChange={e => setState({...state, latDMS: {...state.latDMS, d: e.target.value}})}/>
+                                 <input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Min" value={state.latDMS.m} onChange={e => setState({...state, latDMS: {...state.latDMS, m: e.target.value}})}/>
+                                 <input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Sec" value={state.latDMS.s} onChange={e => setState({...state, latDMS: {...state.latDMS, s: e.target.value}})}/>
+                                 <select className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl font-bold text-slate-200 text-center outline-none" value={state.latDMS.dir} onChange={e => setState({...state, latDMS: {...state.latDMS, dir: e.target.value}})}><option>N</option><option>S</option></select>
+                               </div>
+                            </div>
+                            <div className="space-y-2 min-w-0">
+                               <label className="text-[10px] text-slate-400 font-black uppercase truncate block">Longitude (D/M/S)</label>
+                               <div className="grid grid-cols-4 gap-2">
+                                 <input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Deg" value={state.lonDMS.d} onChange={e => setState({...state, lonDMS: {...state.lonDMS, d: e.target.value}})}/>
+                                 <input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Min" value={state.lonDMS.m} onChange={e => setState({...state, lonDMS: {...state.lonDMS, m: e.target.value}})}/>
+                                 <input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Sec" value={state.lonDMS.s} onChange={e => setState({...state, lonDMS: {...state.lonDMS, s: e.target.value}})}/>
+                                 <select className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl font-bold text-slate-200 text-center outline-none" value={state.lonDMS.dir} onChange={e => setState({...state, lonDMS: {...state.lonDMS, dir: e.target.value}})}><option>W</option><option>E</option></select>
+                               </div>
+                            </div>
+                         </div>
+                      )}
+                   </div>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <h3 className="text-blue-400 font-black uppercase text-[10px] tracking-widest border-b border-slate-800 pb-2">Application Parameters</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                   <Input label="Field Name" value={state.locationName} onChange={e => setState({...state, locationName: e.target.value})}/>
+                   <Input label="Total Acreage" type="number" step="any" value={state.totalAcreage} onChange={e => setState({...state, totalAcreage: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">AC</span>} />
+                   <Input label="Treated Acreage" type="number" step="any" value={state.treatedAcreage} onChange={e => setState({...state, treatedAcreage: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">AC</span>} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div className="flex flex-col gap-2 min-w-0">
+                     <Select label="Target (Crop/Vegetation)" value={state.whatWasTreated} onChange={e => setState({...state, whatWasTreated: e.target.value})}>
+                        <option className="bg-slate-900" value="">Select Crop...</option>
+                        <option className="bg-slate-900" value="Corn">Corn</option>
+                        <option className="bg-slate-900" value="Soybeans">Soybeans</option>
+                        {crops.filter(c => c.name !== 'Corn' && c.name !== 'Soybeans').map(c => (
+                           <option key={c.id} className="bg-slate-900" value={c.name}>{String(c.name)}</option>
+                        ))}
+                        <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">+ Add Crop/Vegetation</option>
+                     </Select>
+                     {state.whatWasTreated === 'ADD_NEW' && (
+                        <Input placeholder="New Crop Name" value={state.customCrop || ''} onChange={e => setState({...state, customCrop: e.target.value})} required/>
+                     )}
+                   </div>
+                   <Input label="Target Pest" value={state.targetPest} onChange={e => setState({...state, targetPest: e.target.value})}/>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                   <Select label="Nozzle Desc" value={state.nozzleDesc} onChange={e => setState({...state, nozzleDesc: e.target.value})}>
+                      <option value="Atomizer Sprinklers">Atomizer Sprinklers</option>
+                      <option value="Flat Fan">Flat Fan</option>
+                      <option value="Hollow Cone">Hollow Cone</option>
+                      <option value="Solid Cone">Solid Cone</option>
+                      <option value="Other">Other...</option>
+                   </Select>
+                   <Input label="Target Dist (ft)" type="number" step="any" value={state.targetDistance} onChange={e => setState({...state, targetDistance: e.target.value})} />
+                   <Input label="Pump PSI" type="number" step="any" value={state.pumpPressure} onChange={e => setState({...state, pumpPressure: e.target.value})} />
+                   
+                   <div className="space-y-2 min-w-0">
+                     <label className="text-[10px] text-slate-400 font-black uppercase pl-1 block truncate">Speed</label>
+                     <div className="flex gap-2">
+                       <input type="number" step="any" className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.travelSpeed} onChange={e => setState({...state, travelSpeed: e.target.value})}/>
+                       <select className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.speedUnit} onChange={e => setState({...state, speedUnit: e.target.value})}>
+                          <option>ft/sec</option>
+                          <option>mph</option>
+                       </select>
+                     </div>
+                   </div>
+                </div>
+                <TextArea label="Drift Management Strategy" value={state.driftPractices} onChange={e => setState({...state, driftPractices: e.target.value})}/>
+              </div>
+              <div className="space-y-6">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                   <h3 className="text-[#9cd33b] font-black uppercase text-[10px] tracking-widest">Environment & Product</h3>
+                   <Button onClick={fetchWeather} className="py-2 text-[9px] bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 shadow-none"><Cloud size={12}/> Auto-Fill Weather</Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div className="flex flex-col gap-2 min-w-0">
+                     <Select 
+                       label="Chemical Product" 
+                       value={inlineProduct ? 'ADD_NEW' : state.chemical} 
+                       onChange={e => { 
+                         if(e.target.value === 'ADD_NEW') {
+                           setInlineProduct(true); 
+                         } else { 
+                           setInlineProduct(false); 
+                           setState({...state, chemical: e.target.value}); 
+                         }
+                       }} 
+                       required
+                     >
+                        <option className="bg-slate-900" value="">Select Product...</option>
+                        {products.map(p => <option className="bg-slate-900" key={p.id} value={p.name}>{String(p.name)}</option>)}
+                        <option className="bg-slate-800 text-[#9cd33b]" value="ADD_NEW">+ Create New Product</option>
+                     </Select>
+                     {inlineProduct && (
+                        <div className="p-6 bg-slate-950 border border-[#9cd33b]/50 rounded-2xl space-y-4 min-w-0 mt-2">
+                           <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-2">
+                              <span className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest truncate pr-2">New Product Profile</span>
+                              <Button variant="secondary" onClick={() => setInlineProduct(false)} className="py-2 px-3 shrink-0"><X size={14}/></Button>
+                           </div>
+                           <div className="grid grid-cols-1 gap-4">
+                              <Input label="Chemical Name" value={newProdData.name} onChange={e => setNewProdData({...newProdData, name: e.target.value})} required/>
+                              <Input label="Default Rate" type="number" step="any" value={newProdData.defaultRate} onChange={e => setNewProdData({...newProdData, defaultRate: e.target.value})} required rightElement={<span className="text-[9px] text-slate-500 font-black">oz/ac</span>} />
+                              <Input label="Current Inventory" type="number" step="any" value={newProdData.inventory} onChange={e => setNewProdData({...newProdData, inventory: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">Gal</span>} />
+                           </div>
+                        </div>
+                     )}
+                   </div>
+                   <Input label="Application Volume" type="number" step="any" value={state.appRate} onChange={e => setState({...state, appRate: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">GPA</span>} />
+                </div>
+                <div className="grid grid-cols-3 gap-6">
+                   <div className="space-y-2 min-w-0">
+                     <label className="text-[10px] text-slate-400 font-black uppercase pl-1 block truncate">Wind</label>
+                     <div className="flex gap-2">
+                       <div className="relative flex-1 min-w-0">
+                         <input type="number" step="any" placeholder="Speed" className="w-full bg-slate-950 border border-slate-800 p-4 pr-10 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.windSpeed} onChange={e => setState({...state, windSpeed: e.target.value})}/>
+                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] text-slate-500 font-black">mph</span>
+                       </div>
+                       <select className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.windDirection} onChange={e => setState({...state, windDirection: e.target.value})}>
+                          <option>N</option><option>NE</option><option>E</option><option>SE</option><option>S</option><option>SW</option><option>W</option><option>NW</option>
+                       </select>
+                     </div>
+                   </div>
+                   
+                   <div className="space-y-2 min-w-0">
+                     <label className="text-[10px] text-slate-400 font-black uppercase pl-1 block truncate">Temp</label>
+                     <div className="flex gap-2">
+                       <input type="number" step="any" className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.temp} onChange={e => setState({...state, temp: e.target.value})}/>
+                       <select className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.tempUnit} onChange={e => setState({...state, tempUnit: e.target.value})}>
+                          <option>F</option><option>C</option>
+                       </select>
+                     </div>
+                   </div>
+                   
+                   <Input label="Humidity" type="number" step="any" value={state.humidity} onChange={e => setState({...state, humidity: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">%</span>} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div className="space-y-4">
+                      <Select label="Attached NOTAM" value={state.attachedNotam || ''} onChange={e => setState({...state, attachedNotam: e.target.value})}>
+                         <option className="bg-slate-900" value="">None</option>
+                         {(notams || []).map(n => <option className="bg-slate-900" key={n.id} value={n.notamNumber}>{String(n.notamNumber)} ({String(n.date)})</option>)}
+                      </Select>
+                      <Select label="FAA Incidents" value={state.incidents} onChange={e => setState({...state, incidents: e.target.value})}>
+                         <option className="bg-slate-900" value="None">None</option>
+                         <option className="bg-slate-900" value="Damage">Damage</option>
+                      </Select>
+                      {state.incidents === 'Damage' && (
+                         <TextArea label="Describe Damage / Incident" value={state.damageDescription} onChange={e => setState({...state, damageDescription: e.target.value})} required/>
+                      )}
+                   </div>
+                   <div className="space-y-2 min-w-0"><label className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-1 block truncate">Boundary (KML)</label><div className="flex flex-col sm:flex-row gap-2 min-w-0"><button type="button" onClick={() => kmlRef.current?.click()} className={`flex-1 p-4 rounded-2xl text-xs font-black uppercase border truncate transition-colors min-w-0 ${state.kmlFileName ? 'bg-[#9cd33b]/10 border-[#9cd33b]/50 text-[#9cd33b]' : 'bg-slate-950 border-slate-800 text-slate-400'}`}>{state.kmlFileName || 'Attach KML'}</button>{state.kmlFileName && <Button variant="danger" className="shrink-0" onClick={() => { setState({...state, kmlData: null, kmlFileName: ''}); if(kmlRef.current) kmlRef.current.value=""; }}><X size={16}/></Button>}<input type="file" accept=".kml" ref={kmlRef} className="hidden" onChange={handleKml}/></div></div>
+                </div>
+              </div>
+            </div>
+          </FormCard>
+        );
+      }
+      return (
+        <TableCard title="Flight Record Ledger" icon={FileText} actionLabel="Log Mission" onAction={() => setState({ ...defaultLogState, isEditing: true })}>
+          <table className="w-full text-left min-w-[700px]"><thead className="bg-slate-800/60 text-slate-400 uppercase text-[9px] font-black tracking-widest border-b border-slate-800"><tr><th className="p-6">Date / Times</th><th className="p-6">Fleet / Client</th><th className="p-6">Product / Location</th><th className="p-6 text-right">Audit</th></tr></thead><tbody className="divide-y divide-slate-800/40">
+            {logs.length === 0 && <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No flights logged.</td></tr>}
+            {logs.map(log => (
+              <tr key={log.id} className="hover:bg-slate-800/40">
+                 <td className="p-6 min-w-[150px]">
+                    <p className="font-black text-slate-100 text-xs break-words">{String(log.date)}</p>
+                    <p className="text-[10px] text-slate-400 font-mono mt-1 uppercase break-words">{String(log.startTime)} - {String(log.endTime)}</p>
+                    {log.attachedNotam && <span className="inline-block mt-2 text-[8px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-black uppercase">NOTAM: {log.attachedNotam}</span>}
+                 </td>
+                 <td className="p-6 min-w-[150px]">
+                    <div className="flex flex-wrap gap-1 mb-2">{log.selectedAircraft?.map((acID, i) => <span key={i} className="text-[9px] font-black text-[#9cd33b] bg-slate-950 px-2 py-0.5 rounded-full border border-slate-800 break-words">{String(acID)}</span>)}</div>
+                    <p className="text-[10px] text-slate-300 font-black uppercase tracking-tight break-words">{String(log.customer)}</p>
+                 </td>
+                 <td className="p-6 min-w-[150px]">
+                    <p className="font-black text-[#9cd33b] uppercase text-xs break-words">{String(log.chemical)}</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold break-words">{String(log.locationName)} | {String(log.treatedAcreage)} AC</p>
+                 </td>
+                 <td className="p-6 text-right flex justify-end gap-3 items-center whitespace-nowrap">
+                    <div className="inline-flex items-center gap-2 text-[9px] font-black text-[#9cd33b] border border-[#9cd33b]/30 bg-[#9cd33b]/10 px-3 py-1 rounded-full uppercase tracking-widest"><ShieldCheck size={12} /> Verified</div>
+                    <button onClick={() => setState({...log, isEditing: true})} className="text-blue-500 mr-4"><Edit3 size={16}/></button>
+                    <button onClick={() => onDelete('flight_logs', log.id)} className="text-red-500"><Trash2 size={16}/></button>
+                 </td>
+              </tr>
+            ))}
+          </tbody></table>
+        </TableCard>
+      );
+    };
+
+    const NotamTab = ({ notams, isEditing, state, setState, onCancel, onSubmit, onDelete, derived, generate, notify, company }) => {
+      if (isEditing) {
+        return (
+          <div className="space-y-6 animate-fade-in min-w-0">
+            <div className="flex justify-start mb-2"><button type="button" onClick={onCancel} className="flex items-center gap-2 text-slate-400 uppercase font-black text-[10px] tracking-widest bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl hover:bg-slate-800"><X size={14} /> Cancel</button></div>
+            <Card className="border-[#9cd33b]/20 min-w-0">
+               <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-[#9cd33b] mb-8 border-b border-slate-800 pb-6 min-w-0"><Navigation size={24} className="shrink-0" /><h3 className="text-xl font-black uppercase tracking-tighter truncate">FAA Flight Service Bridge</h3></div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-12 min-w-0">
+                  <div className="space-y-6 min-w-0">
+                    <Input type="date" label="Filing Date" value={state.date} onChange={e => setState({...state, date: e.target.value})} />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                      <div className="space-y-2 min-w-0"><Input type="time" label="Local Start" value={state.localStartTime} onChange={e => setState({...state, localStartTime: e.target.value})} /><div className="text-[9px] font-black text-[#9cd33b] uppercase pl-1 truncate">Zulu: {derived.utcStart}Z</div></div>
+                      <Input label="Radius" type="number" step="any" value={state.radius} onChange={e => setState({...state, radius: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">NM</span>} />
+                      <Input label="Duration" type="number" step="any" value={state.duration} onChange={e => setState({...state, duration: e.target.value})} rightElement={<span className="text-[9px] text-slate-500 font-black">HRS</span>} />
+                    </div>
+                    
+                    <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 space-y-4 min-w-0">
+                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b border-slate-800 pb-4 min-w-0">
+                          <span className="text-[10px] font-black uppercase text-[#9cd33b] tracking-widest truncate">Airspace Coordinates</span>
+                          <select className="bg-slate-900 border border-slate-700 text-xs font-bold text-slate-300 p-3 rounded-xl outline-none w-full sm:w-auto truncate" value={state.coordType} onChange={e => setState({...state, coordType: e.target.value})}>
+                             <option value="Decimal">Decimal Degrees</option>
+                             <option value="DMS">DMS (Deg/Min/Sec)</option>
+                          </select>
+                       </div>
+                       
+                       {state.coordType === 'Decimal' ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0">
+                             <div className="space-y-2 min-w-0"><label className="text-[10px] text-slate-400 font-black uppercase pl-1 block truncate">Latitude</label><div className="flex gap-2"><input type="number" step="any" className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.latDec} onChange={e => setState({...state, latDec: e.target.value})}/><select className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.latDecDir || 'N'} onChange={e => setState({...state, latDecDir: e.target.value})}><option value="N">N</option><option value="S">S</option></select></div></div>
+                             <div className="space-y-2 min-w-0"><label className="text-[10px] text-slate-400 font-black uppercase pl-1 block truncate">Longitude</label><div className="flex gap-2"><input type="number" step="any" className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.lonDec} onChange={e => setState({...state, lonDec: e.target.value})}/><select className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-bold text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={state.lonDecDir || 'W'} onChange={e => setState({...state, lonDecDir: e.target.value})}><option value="W">W</option><option value="E">E</option></select></div></div>
+                          </div>
+                       ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 min-w-0">
+                             <div className="space-y-2 min-w-0"><label className="text-[10px] text-slate-400 font-black uppercase truncate block">Latitude (D/M/S)</label><div className="grid grid-cols-4 gap-2"><input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Deg" value={state.latDMS.d} onChange={e => setState({...state, latDMS: {...state.latDMS, d: e.target.value}})}/><input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Min" value={state.latDMS.m} onChange={e => setState({...state, latDMS: {...state.latDMS, m: e.target.value}})}/><input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Sec" value={state.latDMS.s} onChange={e => setState({...state, latDMS: {...state.latDMS, s: e.target.value}})}/><select className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl font-bold text-slate-200 text-center outline-none" value={state.latDMS.dir} onChange={e => setState({...state, latDMS: {...state.latDMS, dir: e.target.value}})}><option>N</option><option>S</option></select></div></div>
+                             <div className="space-y-2 min-w-0"><label className="text-[10px] text-slate-400 font-black uppercase truncate block">Longitude (D/M/S)</label><div className="grid grid-cols-4 gap-2"><input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Deg" value={state.lonDMS.d} onChange={e => setState({...state, lonDMS: {...state.lonDMS, d: e.target.value}})}/><input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Min" value={state.lonDMS.m} onChange={e => setState({...state, lonDMS: {...state.lonDMS, m: e.target.value}})}/><input type="number" className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl text-xs text-center text-slate-200" placeholder="Sec" value={state.lonDMS.s} onChange={e => setState({...state, lonDMS: {...state.lonDMS, s: e.target.value}})}/><select className="min-w-0 bg-slate-900 border border-slate-800 p-3 rounded-xl font-bold text-slate-200 text-center outline-none" value={state.lonDMS.dir} onChange={e => setState({...state, lonDMS: {...state.lonDMS, dir: e.target.value}})}><option>W</option><option>E</option></select></div></div>
+                          </div>
+                       )}
+                    </div>
+                  </div>
+                  <div className="bg-slate-950 p-8 rounded-[2rem] border border-slate-800 flex flex-col shadow-inner min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 min-w-0"><span className="text-[10px] text-slate-500 font-black uppercase tracking-widest truncate">Verified Output</span><div className="flex gap-4 shrink-0"><button onClick={() => { setState({...state, script: generate()}); notify("Script Staged", "info"); }} className="text-blue-500 hover:text-blue-400 text-[10px] font-black uppercase">Stage</button><button onClick={() => {copyToClipboard(generate()); notify("Copied!", "success");}} className="text-[#9cd33b] hover:text-[#bce455] text-[10px] font-black uppercase">Copy</button></div></div>
+                    <div className="flex-1 font-mono text-xs leading-loose text-[#9cd33b] bg-slate-900/50 p-6 rounded-2xl border border-slate-800 break-all whitespace-normal overflow-y-auto">{generate()}</div>
+                  </div>
+               </div>
+            </Card>
+            <FormCard title="Log Filed NOTAM" onSubmit={onSubmit} submitLabel="Archive NOTAM">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <Input type="date" label="Date Filed" value={state.date} onChange={e => setState({...state, date: e.target.value})} required/>
+                 <Input label="NOTAM Number" value={state.notamNumber} onChange={e => setState({...state, notamNumber: e.target.value})} required/>
+                 <div className="md:col-span-2"><TextArea label="Filed Script Details" value={state.script} onChange={e => setState({...state, script: e.target.value})} required/></div>
+               </div>
+            </FormCard>
+          </div>
+        );
+      }
+      return (
+        <TableCard title="NOTAM Archives" icon={Navigation} actionLabel="Create NOTAM" onAction={() => setState({ ...defaultNotamState, isEditing: true })}>
+          <table className="w-full text-left text-[11px] min-w-[600px]"><thead className="bg-slate-800/60 text-slate-400 uppercase text-[9px] font-black tracking-widest border-b border-slate-800"><tr><th className="p-6">Date</th><th className="p-6">NOTAM Number</th><th className="p-6">Script</th><th className="p-6 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-800/40">
+            {notams.length === 0 && <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest">No NOTAMs.</td></tr>}
+            {notams.map(n => (
+              <tr key={n.id} className="hover:bg-slate-800/40"><td className="p-6 min-w-[100px]"><p className="font-black text-slate-100 text-sm break-words">{String(n.date)}</p></td><td className="p-6 min-w-[120px]"><span className="text-[11px] font-black text-[#9cd33b] bg-slate-950 px-3 py-1 rounded-full border border-slate-800 break-words">{String(n.notamNumber)}</span></td><td className="p-6 min-w-[200px]"><p className="text-[9px] font-mono text-slate-300 line-clamp-2 max-w-sm break-all whitespace-normal">{String(n.script)}</p></td><td className="p-6 text-right whitespace-nowrap"><button onClick={() => setState({...n, isEditing: true})} className="text-blue-500 mr-4"><Edit3 size={16}/></button><button onClick={() => onDelete('notam_logs', n.id)} className="text-red-400"><Trash2 size={16}/></button></td></tr>
+            ))}
+          </tbody></table>
+        </TableCard>
+      );
+    };
+
+    const FaaReportTab = ({ company, fleet, certs, monthlyReport, reportMonth, setReportMonth, showFormalReport, setShowFormalReport, notify, faaReports, onDelete, db, appId }) => {
+      const handlePrint = () => {
+        const element = document.getElementById('faa-report-content');
+        if (window.html2pdf && element) {
+           const opt = {
+             margin:       0.5,
+             filename:     `FAA_Report_${company.name}_${reportMonth}.pdf`,
+             image:        { type: 'jpeg', quality: 0.98 },
+             html2canvas:  { scale: 2, useCORS: true },
+             jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+           };
+           window.html2pdf().set(opt).from(element).save();
+        } else {
+           window.print();
+        }
+      };
+
+      const getDaysInMonth = (yyyyMonth) => {
+        if (!yyyyMonth) return '';
+        const [y, m] = yyyyMonth.split('-');
+        const lastDay = new Date(y, m, 0).getDate();
+        return `${m}/01/${y} - ${m}/${lastDay}/${y}`;
+      };
+
+      const stateCert = certs?.find(c => c.name === 'State Pesticide');
+      const stateCertNo = stateCert ? stateCert.licenseNumber : (company.certNo || 'N/A');
+
+      const exemptionCert = certs?.find(c => c.name === 'FAA 44807');
+      const exemptionNo = exemptionCert ? exemptionCert.licenseNumber : 'N/A';
+
+      const part137Cert = certs?.find(c => c.name === 'FAA Part 137' || c.name === 'FAA Part 107');
+      const part137No = part137Cert ? part137Cert.licenseNumber : 'N/A';
+
+      const emailAddress = "9-AVS-FS-AFS-700-Correspondence@faa.gov";
+      const emailSubject = `FAA Monthly Report: ${company.name} - ${reportMonth}`;
+      const emailBody = `To whom it may concern,\n\nPlease find attached the monthly flight operations report for ${company.name} (Exemption #${exemptionNo}) for the period of ${reportMonth}.\n\nOfficial Company Email: ${company.email || 'N/A'}\n\nThank you,\n${company.supervisor}`;
+
+      const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${emailAddress}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+
+      const handleEmailClick = (e) => {
+        try { copyToClipboard(emailAddress); notify("Address copied to clipboard just in case!", "success"); } catch (err) {}
+      };
+
+      return (
+        <div className="space-y-8 animate-fade-in min-w-0">
+           <Card className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 print:hidden min-w-0">
+              <div className="flex items-center gap-6 min-w-0 flex-1"><div className="p-4 bg-[#9cd33b]/10 border border-[#9cd33b]/20 rounded-3xl text-[#9cd33b] shrink-0"><FileBarChart size={32} /></div><div className="min-w-0"><h2 className="text-2xl font-black uppercase tracking-tighter text-slate-100 truncate">SprayOps FAA Reporting</h2><p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 truncate">Reporting for {company.name}</p></div></div>
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto shrink-0"><input type="month" className="w-full sm:w-auto bg-slate-950 border border-slate-800 p-4 rounded-2xl text-sm font-black text-slate-200 outline-none focus:border-[#9cd33b] transition-colors" value={reportMonth} onChange={e => setReportMonth(e.target.value)}/><Button onClick={() => setShowFormalReport(!showFormalReport)} className="w-full sm:w-auto">{showFormalReport ? 'Close Preview' : 'Generate Report'}</Button></div>
+           </Card>
+
+           {showFormalReport ? (
+             <div id="faa-report-content" className="bg-white text-black p-8 md:p-12 rounded-[2rem] shadow-2xl space-y-8 font-sans overflow-x-auto print:p-0 print:shadow-none print:border-none print:w-full print:m-0">
+                
+                <div data-html2canvas-ignore="true" className="flex flex-col sm:flex-row justify-end items-center gap-4 print:hidden mb-8 border-b border-slate-200 pb-8">
+                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mr-auto hidden sm:block mt-2">Step 1: Save as PDF. Step 2: Send & Attach.</span>
+                   <Button onClick={handlePrint} className="bg-slate-800 text-white hover:bg-slate-700 py-4"><Printer size={16}/> Save as PDF</Button>
+                   <a href={gmailLink} target="_blank" rel="noopener noreferrer" onClick={handleEmailClick} className="px-6 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg bg-red-600 text-white hover:bg-red-700 active:scale-[0.98]"><Navigation size={16}/> Send via Gmail</a>
+                </div>
+
+                <div className="text-center md:text-left border-b-2 border-black pb-6">
+                   <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-tight text-black">FAA Monthly Report</h1>
+                   <p className="text-lg font-medium text-black mt-1">Period: {reportMonth} ({getDaysInMonth(reportMonth)})</p>
+                </div>
+
+                <section className="space-y-4">
+                   <h2 className="text-xl font-bold text-black border-b border-gray-300 pb-1">Certificate Information</h2>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Company Name</span><span>{company.name || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Chief Supervisor</span><span>{company.supervisor || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Chief Supervisor Email</span><span className="break-all">{company.email || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Pilot in Command</span><span>{company.supervisor || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Pilot in Command Email</span><span className="break-all">{company.email || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Operator's Cert (Part 137/107)</span><span>{part137No}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Operator's State Certificate Number</span><span>{stateCertNo}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">44807 Exemption Number</span><span>{exemptionNo}</span></div>
+                   </div>
+                </section>
+
+                <section className="space-y-4 pt-4">
+                   <h2 className="text-xl font-bold text-black border-b border-gray-300 pb-1">Pilot Information</h2>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Pilot Name</span><span>{company.supervisor || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Pilot Email</span><span className="break-all">{company.email || 'N/A'}</span></div>
+                      <div className="grid grid-cols-2 border-b border-gray-100 py-2"><span className="font-bold">Applicator's State Certificate Number</span><span>{stateCertNo}</span></div>
+                   </div>
+                </section>
+
+                {fleet.length > 0 ? fleet.map((d, i) => {
+                  const fLogs = monthlyReport.logs.filter(l => l.selectedAircraft?.includes(d.id));
+                  const mins = fLogs.reduce((acc, l) => acc + (parseFloat(l.flightTimeMinutes) || 0), 0);
+                  return (
+                     <section key={i} className="space-y-4 pt-6 break-inside-avoid">
+                        <h2 className="text-xl font-bold text-black border-b border-gray-300 pb-1">Information For: {d.model || 'Aircraft'}</h2>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm text-left border-collapse border border-black min-w-[500px]">
+                             <thead className="bg-gray-100">
+                                <tr>
+                                   <th className="p-3 border border-black font-bold">Manufacturer/Model</th>
+                                   <th className="p-3 border border-black font-bold">N Number</th>
+                                   <th className="p-3 border border-black font-bold">Number of Flights</th>
+                                   <th className="p-3 border border-black font-bold">Total Aircraft Operational Hours</th>
+                                </tr>
+                             </thead>
+                             <tbody>
+                                <tr>
+                                   <td className="p-3 border border-black">{d.model || 'N/A'}</td>
+                                   <td className="p-3 border border-black">{d.id || 'N/A'}</td>
+                                   <td className="p-3 border border-black">{fLogs.length}</td>
+                                   <td className="p-3 border border-black">{(mins/60).toFixed(2)} Hours</td>
+                                </tr>
+                             </tbody>
+                          </table>
+                        </div>
+                     </section>
+                  );
+                }) : (
+                   <section className="space-y-4 pt-6">
+                      <h2 className="text-xl font-bold text-black border-b border-gray-300 pb-1">Information For: Aircraft</h2>
+                      <p className="text-sm italic text-gray-600">No aircraft recorded in fleet.</p>
+                   </section>
+                )}
+
+                <section className="space-y-4 pt-6">
+                   <h2 className="text-xl font-bold text-black border-b border-gray-300 pb-1">Flight Information</h2>
+                   <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left border-collapse border border-black min-w-[800px]">
+                         <thead className="bg-gray-100">
+                            <tr>
+                               <th className="p-3 border border-black font-bold">Date</th>
+                               <th className="p-3 border border-black font-bold">Type of Applications</th>
+                               <th className="p-3 border border-black font-bold">Type of Application Other</th>
+                               <th className="p-3 border border-black font-bold">City, State</th>
+                               <th className="p-3 border border-black font-bold">Latitude, Longitude</th>
+                               <th className="p-3 border border-black font-bold">Takeoff or Landing Damage</th>
+                               <th className="p-3 border border-black font-bold">Equipment Malfunctions</th>
+                            </tr>
+                         </thead>
+                         <tbody>
+                            {monthlyReport.logs.length === 0 ? (
+                               <tr><td colSpan="7" className="p-6 text-center italic text-gray-500 border border-black">No flights recorded for this period.</td></tr>
+                            ) : (
+                               monthlyReport.logs.map(l => (
+                                  <tr key={l.id}>
+                                     <td className="p-3 border border-black whitespace-nowrap font-bold">{l.date}</td>
+                                     <td className="p-3 border border-black">Pesticide / Agricultural</td>
+                                     <td className="p-3 border border-black">{l.chemical || 'N/A'}</td>
+                                     <td className="p-3 border border-black">{l.locationName || 'N/A'}</td>
+                                     <td className="p-3 border border-black font-mono text-xs">{l.coordinates || 'N/A'}</td>
+                                     <td className="p-3 border border-black">{l.incidents && l.incidents !== 'None' ? l.incidents : 'No Damage Reported'}</td>
+                                     <td className="p-3 border border-black">{l.incidents && l.incidents !== 'None' ? 'Equipment Malfunction' : 'No Damage Reported'}</td>
+                                  </tr>
+                               ))
+                            )}
+                         </tbody>
+                      </table>
+                   </div>
+                </section>
+             </div>
+           ) : (
+             <div className="space-y-8 min-w-0">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:hidden min-w-0">
+                  <Card className="space-y-6 min-w-0"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-800 pb-4 truncate">Monthly Totals</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0"><div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 truncate">Total Hours</p><p className="text-3xl font-black text-[#9cd33b] truncate">{monthlyReport.totalHours}</p></div><div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 truncate">Total Flights</p><p className="text-3xl font-black text-slate-200 truncate">{monthlyReport.flightCount}</p></div></div></Card>
+                  <Card className="flex flex-col items-center justify-center text-center space-y-6 min-w-0"><ShieldCheck size={56} className="text-[#9cd33b] opacity-50 shrink-0" /><Button className="w-full py-5 text-sm" onClick={async () => { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'faa_reports'), { month: reportMonth, companyName: company.name, filedAt: new Date().toISOString() }); notify("Report Saved to Vault.", "success"); }}>Archive Report to Vault</Button></Card>
+               </div>
+               
+               <Card className="print:hidden">
+                  <div className="flex items-center gap-3 text-[#9cd33b] font-black uppercase text-xs tracking-widest border-b border-slate-800 pb-6 mb-6">
+                     <History size={18} className="shrink-0" /> <span className="truncate">Archived FAA Reports</span>
+                  </div>
+                  <div className="bg-slate-950 rounded-[2rem] border border-slate-800 overflow-hidden">
+                     <table className="w-full text-left text-[11px] min-w-[600px]">
+                        <thead className="bg-slate-900/50 text-slate-400 uppercase text-[9px] font-black tracking-widest border-b border-slate-800">
+                           <tr><th className="p-5">Report Period</th><th className="p-5">Archived On</th><th className="p-5 text-right">Actions</th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/50">
+                           {(!faaReports || faaReports.length === 0) && <tr><td colSpan="3" className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">No reports archived yet.</td></tr>}
+                           {(faaReports || []).map(r => (
+                              <tr key={r.id} className="hover:bg-slate-800/20">
+                                 <td className="p-5 font-black text-slate-200 text-sm">{r.month}</td>
+                                 <td className="p-5 text-slate-400 font-mono text-[10px]">{new Date(r.filedAt).toLocaleDateString()} at {new Date(r.filedAt).toLocaleTimeString()}</td>
+                                 <td className="p-5 text-right whitespace-nowrap flex justify-end items-center gap-6">
+                                    <button onClick={() => { setReportMonth(r.month); setShowFormalReport(true); }} className="text-blue-500 hover:text-blue-400 flex items-center gap-2 font-black uppercase tracking-widest text-[10px]"><Eye size={14} /> View</button>
+                                    <button onClick={() => onDelete('faa_reports', r.id)} className="text-red-500 hover:text-red-400"><Trash2 size={16}/></button>
+                                 </td>
+                              </tr>
+                           ))}
+                        </tbody>
+                     </table>
+                  </div>
+               </Card>
+             </div>
+           )}
+        </div>
+      );
+    }
+
+    if (typeof window !== 'undefined') {
+      window.MissionLogTab = MissionLogTab;
+      window.NotamTab = NotamTab;
+      window.FaaReportTab = FaaReportTab;
+    }
+
     const App = () => {
       const [user, setUser] = useState(null); 
       const [customUser, setCustomUser] = useState(null); 
@@ -2339,7 +2998,7 @@
               />
             )}
             
-            {activeTab === 'faa-report' && <FaaReportTab company={company} fleet={company.fleet || []} certs={certs} monthlyReport={faaReportData} reportMonth={reportMonth} setReportMonth={setReportMonth} showFormalReport={showFormalReport} setShowFormalReport={setShowFormalReport} notify={notify} faaReports={faaReports} onDelete={deleteItem} />}
+            {activeTab === 'faa-report' && <FaaReportTab company={company} fleet={company.fleet || []} certs={certs} monthlyReport={faaReportData} reportMonth={reportMonth} setReportMonth={setReportMonth} showFormalReport={showFormalReport} setShowFormalReport={setShowFormalReport} notify={notify} faaReports={faaReports} onDelete={deleteItem} db={db} appId={appId} />}
             
             {activeTab === 'schedule' && (
               <ScheduleTab 
@@ -2416,3 +3075,4 @@
   </script>
 </body>
 </html>
+
