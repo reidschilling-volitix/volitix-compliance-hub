@@ -1012,14 +1012,32 @@ const WeatherBadge = ({ date }) => {
               + Create New Customer
             </option>
           </Select>
-          {inlineCustomer && <InlineCustomerForm data={newCustData} setData={setNewCustData} onClose={() => setInlineCustomer(false)} onSave={() => {
-            if (!newCustData.name) { notify('Customer name is required.', 'error'); return; }
-            const saved = onAddCustomer(newCustData);
-            setState({ ...state, customer: saved.name });
-            setNewCustData({ name: '', contactName: '', email: '', phone: '', address: '', city: '', state: '', zip: '' });
-            setInlineCustomer(false);
-            notify('Customer added.', 'success');
-          }} />}
+          {inlineCustomer && (
+            <div className="p-6 bg-slate-950 border border-[#9cd33b]/50 rounded-2xl space-y-4 min-w-0 mt-2">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-2">
+                <span className="text-[10px] text-[#9cd33b] font-black uppercase tracking-widest truncate pr-2">New Customer Profile</span>
+                <Button variant="secondary" onClick={() => setInlineCustomer(false)} className="py-2 px-3 shrink-0"><X size={14}/></Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input label="Company/Farm Name" value={newCustData.name} onChange={(e) => setNewCustData({ ...newCustData, name: e.target.value })} required />
+                <Input label="Contact Name" value={newCustData.contactName} onChange={(e) => setNewCustData({ ...newCustData, contactName: e.target.value })} />
+                <Input label="Email" type="email" value={newCustData.email || ''} onChange={(e) => setNewCustData({ ...newCustData, email: e.target.value })} />
+                <Input label="Phone" value={newCustData.phone || ''} onChange={(e) => setNewCustData({ ...newCustData, phone: e.target.value })} />
+                <Input label="Address" value={newCustData.address || ''} onChange={(e) => setNewCustData({ ...newCustData, address: e.target.value })} />
+                <Input label="City" value={newCustData.city || ''} onChange={(e) => setNewCustData({ ...newCustData, city: e.target.value })} />
+                <Input label="State" value={newCustData.state || ''} onChange={(e) => setNewCustData({ ...newCustData, state: e.target.value })} />
+                <Input label="Zip" value={newCustData.zip || ''} onChange={(e) => setNewCustData({ ...newCustData, zip: e.target.value })} />
+              </div>
+              <Button onClick={() => {
+                if (!newCustData.name) { notify('Customer name is required.', 'error'); return; }
+                const saved = onAddCustomer(newCustData);
+                setState({ ...state, customer: saved.name });
+                setNewCustData({ name: '', contactName: '', email: '', phone: '', address: '', city: '', state: '', zip: '' });
+                setInlineCustomer(false);
+                notify('Customer added.', 'success');
+              }} className="w-full mt-2">Save Customer</Button>
+            </div>
+          )}
         </div>
 
         <Input
