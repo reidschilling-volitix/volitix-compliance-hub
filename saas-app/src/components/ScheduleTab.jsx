@@ -1,3 +1,7 @@
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { X, CalendarDays, MapPin, Plus, Clock, GripVertical, ClipboardCheck, ChevronLeft, ChevronRight, CloudSun, Globe, Map, LayoutDashboard, Download } from 'lucide-react';
+import { tw, Card, Button, Input, Select, FormCard } from './ui/components.jsx';
+import FieldMapper from './FieldMapper.jsx';
 import L from 'leaflet';
 import { haversineDist, polygonAreaSqM } from '../utils/geometry';
 
@@ -38,9 +42,27 @@ const defaultWorkOrderState = {
 };
 
 function ScheduleTab(props) {
-    // Backup for editing job
-    const [backupJob, setBackupJob] = useState(null);
-    // Local state for the work order form
+  const { workOrders, setWorkOrders, customers, products, fleet, notify, onAddCustomer, onAddProduct, onLogMission } = props;
+
+  // Form / editing state
+  const [state, setState] = useState(defaultWorkOrderState);
+  const [isEditing, setIsEditing] = useState(false);
+  const [inlineCustomer, setInlineCustomer] = useState(false);
+  const [newCustData, setNewCustData] = useState({ name: '', contactName: '', email: '', phone: '', address: '', city: '', state: '', zip: '' });
+
+  // View / calendar state
+  const [viewMode, setViewMode] = useState('calendar');
+  const [calendarBaseDate, setCalendarBaseDate] = useState(new Date());
+  const [selectedMapJob, setSelectedMapJob] = useState(null);
+
+  // Weather cache (populated externally; badge hides itself when empty)
+  const [weatherCache] = useState({});
+
+  // Backup for editing job
+  const [backupJob, setBackupJob] = useState(null);
+
+  // Ref for KML file input
+  const kmlRef = useRef(null);
 
 
 const getStatusColor = (status) => {
@@ -266,7 +288,7 @@ const computeFinalCoords = (latDec, latDecDir, lonDec, lonDecDir, latDMS, lonDMS
   };
 };
 
-const GeoAndKmlInput = ({ state, setState, notify, kmlRef, workOrders }) => {
+const GeoAndKmlInput = ({ state, setState, notify, kmlRef, workOrders, fleet }) => {
   const [pasteVal, setPasteVal] = useState('');
   const [parsedSuccess, setParsedSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -542,7 +564,7 @@ const StatsRow = ({ stats }) => (
   </div>
 )
 
-const WeatherBadge = ({ date }) => {
+const WeatherBadge = ({ date, weatherCache }) => {
     const wx = weatherCache[date];
     if (!wx) return null;
     const colors = { green: 'text-emerald-400', yellow: 'text-amber-400', red: 'text-red-400' };
@@ -848,7 +870,7 @@ const WeatherBadge = ({ date }) => {
                         <button className="text-slate-400 hover:text-white" type="button"><ClipboardCheck size={12} /></button>
                       </div>
                       <div className="font-bold opacity-80 font-mono truncate block">{Number(job.acres).toFixed(2)} AC</div>
-                      <WeatherBadge date={job.date} />
+                      <WeatherBadge date={job.date} weatherCache={weatherCache} />
                     </div>
                   ))}
                   <div onClick={() => { setState({ ...defaultWorkOrderState, date: date.toISOString().slice(0, 10), isScheduled: true }); setIsEditing(true); }} className="w-full h-8 lg:h-10 border border-dashed border-slate-700 rounded-xl flex items-center justify-center text-slate-600 hover:border-slate-500 cursor-pointer transition-colors mt-2">
@@ -1158,6 +1180,7 @@ const WeatherBadge = ({ date }) => {
                 notify={notify}
                 kmlRef={kmlRef}
                 workOrders={workOrders}
+                fleet={fleet}
               />
             </div>
           ))}
